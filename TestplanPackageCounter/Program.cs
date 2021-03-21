@@ -10,32 +10,37 @@
     {
         static void Main(string[] args)
         {
-            CounterSettings settings = new CounterSettings(
+            CounterSettings counterSettings = new CounterSettings(
                 pathToTestplan: @"C:\Users\at\Documents\Backup\testplan.json",
+                outcomingPath: @"C:\Users\at\Documents\Backup\testplan_edited.json",
                 pathToResults: @"null",
                 rewriteTestplan: false,
                 ignoreUePackages: false,
                 ignoreAlPackages: false,
-                calculateWithMaxUe: false
+                calculateWithMaxUe: false,
+                fillDefaultParams: false
             );
 
-            JsonSerializerSettings _settings = new JsonSerializerSettings { };
+            JsonSerializerSettings serializerSettings = new JsonSerializerSettings { };
 
-            _settings.Converters.Add(new TestConverter());
+            serializerSettings.Converters.Add(new TestConverter());
 
-            string testplanContent = File.ReadAllText(settings.PathToTestplan);
+            string testplanContent = File.ReadAllText(counterSettings.PathToTestplan);
 
-            List<TestSuite> testSuites = new List<TestSuite>();
+            List<TestSuite> testSuites = 
+                JsonConvert.DeserializeObject<List<TestSuite>>(testplanContent, serializerSettings);
 
-            testSuites = JsonConvert.DeserializeObject<List<TestSuite>>(testplanContent, _settings);
+            string serializedJson = JsonConvert.SerializeObject(testSuites, Formatting.Indented);
 
-            //TODO: write to file
+            File.WriteAllText(counterSettings.OutcomingPath, serializedJson);
+
             //TODO: write without null fields and [NonExistString]
             //TODO: count without Ue
             //TODO: count without Al
             //TODO: count with max Ue among all tests.
             //TODO: write to csv
             //TODO: determine by name what is android, what is IOS etc.
+            //TODO: fillWithParams converter.
         }
     }
 }
