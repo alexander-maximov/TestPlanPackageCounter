@@ -16,6 +16,6 @@
 
         internal const string ReverseAdvertisment = "NotChange";        
 
-        internal const int RestartTimeOut = 0;        
+        internal const int RestartTimeOut = 0;
     }
 }

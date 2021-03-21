@@ -18,12 +18,16 @@
                 ignoreUePackages: false,
                 ignoreAlPackages: false,
                 calculateWithMaxUe: false,
-                fillDefaultParams: false
+                fillDefaultParams: true
             );
 
-            JsonSerializerSettings serializerSettings = new JsonSerializerSettings { };
+            JsonSerializerSettings serializerSettings = new JsonSerializerSettings 
+            {
+                DefaultValueHandling = DefaultValueHandling.Populate
+            };
 
             serializerSettings.Converters.Add(new TestConverter());
+            serializerSettings.Converters.Add(new ParamsConverter(counterSettings.FillDefaultParams));
 
             string testplanContent = File.ReadAllText(counterSettings.PathToTestplan);
 
@@ -40,7 +44,6 @@
             //TODO: count with max Ue among all tests.
             //TODO: write to csv
             //TODO: determine by name what is android, what is IOS etc.
-            //TODO: fillWithParams converter.
         }
     }
 }

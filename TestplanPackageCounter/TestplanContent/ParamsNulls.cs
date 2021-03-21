@@ -3,46 +3,46 @@ using System.ComponentModel;
 
 namespace TestplanPackageCounter.TestplanContent
 {
-    internal class ParamsDefault : Params
+    internal class ParamsNulls : Params
     {
         [JsonProperty("AppProject")]
-        [DefaultValue(Constants.AppProject)]
+        [DefaultValue(Constants.NonExistString)]
         public string AppProject { get; private set; }
 
         [JsonProperty("CleaningMode")]
-        [DefaultValue(Constants.CleaningMode)]
+        [DefaultValue(Constants.NonExistString)]
         public string CleaningMode { get; private set; }
 
         [JsonProperty("RestartMode")]
-        [DefaultValue(Constants.RestartMode)]
+        [DefaultValue(Constants.NonExistString)]
         public string RestartMode { get; private set; }
 
         [JsonProperty("AnalyticsInitMode")]
-        [DefaultValue(Constants.AnalyticsInitMode)]
+        [DefaultValue(Constants.NonExistString)]
         public string AnalyticsInitMode { get; private set; }
 
         [JsonProperty("MethodAfterTest")]
-        [DefaultValue(null)]
+        [DefaultValue(Constants.NonExistString)]
         public string MethodAfterTest { get; private set; }
 
         [JsonProperty("PlatformPackagesCount")]
-        [DefaultValue(null)]
+        [DefaultValue(Constants.NonExistString)]
         public PlatformPackages PlatformPackagesCount { get; private set; }
 
         [JsonProperty("RestartTimeout")]
-        [DefaultValue(Constants.RestartTimeOut)]
-        public int RestartTimeout { get; private set; }
+        [DefaultValue(Constants.NonExistString)]
+        public string RestartTimeout { get; private set; }
 
         [JsonProperty("ReverseAdvertisment")]
-        [DefaultValue(Constants.ReverseAdvertisment)]
+        [DefaultValue(Constants.NonExistString)]
         public string ReverseAdvertisment { get; private set; }
 
         [JsonProperty("TimeOut")]
-        [DefaultValue(null)]
-        public int? TimeOut { get; private set; }
+        [DefaultValue(Constants.NonExistString)]
+        public string TimeOut { get; private set; }
 
         [JsonProperty("DefaultPackagesCount")]
-        [DefaultValue(Constants.DefaultPackagesCount)]
+        [JsonRequired]
         public int DefaultPackagesCount { get; private set; }
     }
 }

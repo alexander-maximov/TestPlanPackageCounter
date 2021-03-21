@@ -6,23 +6,23 @@
     internal class PlatformPackages
     {
         [JsonProperty("Android")]
-        [DefaultValue(Constants.NonExistString)]
+        [DefaultValue(null)]
         public int? Android { get; private set; }
 
         [JsonProperty("IOS")]
-        [DefaultValue(Constants.NonExistString)]
+        [DefaultValue(null)]
         public int? Ios { get; private set; }
 
         [JsonProperty("MacOS")]
-        [DefaultValue(Constants.NonExistString)]
+        [DefaultValue(null)]
         public int? MacOS { get; private set; }
 
         [JsonProperty("UWP")]
-        [DefaultValue(Constants.NonExistString)]
+        [DefaultValue(null)]
         public int? Uwp { get; private set; }
 
         [JsonProperty("Windows")]
-        [DefaultValue(Constants.NonExistString)]
+        [DefaultValue(null)]
         public int? Windows { get; private set; }
     }
 }
