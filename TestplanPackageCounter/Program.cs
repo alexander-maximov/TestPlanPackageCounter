@@ -18,27 +18,27 @@
                 ignoreUePackages: false,
                 ignoreAlPackages: false,
                 calculateWithMaxUe: false,
-                fillDefaultParams: true
+                fillWithDefaultParams: false
             );
 
             JsonSerializerSettings serializerSettings = new JsonSerializerSettings 
             {
-                DefaultValueHandling = DefaultValueHandling.Populate
+                DefaultValueHandling = DefaultValueHandling.Populate,
+                NullValueHandling = NullValueHandling.Ignore
             };
 
             serializerSettings.Converters.Add(new TestConverter());
-            serializerSettings.Converters.Add(new ParamsConverter(counterSettings.FillDefaultParams));
+            serializerSettings.Converters.Add(new ParamsConverter(counterSettings.FillWithDefaultParams));
 
             string testplanContent = File.ReadAllText(counterSettings.PathToTestplan);
 
             List<TestSuite> testSuites = 
                 JsonConvert.DeserializeObject<List<TestSuite>>(testplanContent, serializerSettings);
 
-            string serializedJson = JsonConvert.SerializeObject(testSuites, Formatting.Indented);
+            string serializedJson = JsonConvert.SerializeObject(testSuites, Formatting.Indented, serializerSettings);
 
             File.WriteAllText(counterSettings.OutcomingPath, serializedJson);
 
-            //TODO: write without null fields and [NonExistString]
             //TODO: count without Ue
             //TODO: count without Al
             //TODO: count with max Ue among all tests.

@@ -50,6 +50,7 @@
     <Compile Include="Converters\ParamsConverter.cs" />
     <Compile Include="Converters\TestConverter.cs" />
     <Compile Include="CounterSettings.cs" />
+    <Compile Include="PackagesEnumerator.cs" />
     <Compile Include="PlatformPackages.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

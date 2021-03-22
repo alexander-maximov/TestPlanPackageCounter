@@ -5,7 +5,7 @@
 
     internal class ParamsTest : ParamslessTest
     {
-        [JsonProperty("Params")]
+        [JsonProperty("Params", Order = 2)]
         [DefaultValue(null)]
         public Params Params { get; private set; }
     }

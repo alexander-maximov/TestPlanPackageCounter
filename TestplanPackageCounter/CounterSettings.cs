@@ -16,7 +16,7 @@
 
         internal bool CalculatePackagesWithMaxUe { get; }
 
-        internal bool FillDefaultParams { get; }
+        internal bool FillWithDefaultParams { get; }
 
         public CounterSettings(
             string pathToTestplan,
@@ -26,7 +26,7 @@
             bool ignoreUePackages,
             bool ignoreAlPackages,
             bool calculateWithMaxUe,
-            bool fillDefaultParams
+            bool fillWithDefaultParams
         )
         {
             this.PathToTestplan = pathToTestplan;
@@ -36,7 +36,7 @@
             this.IgnoreAlPackages = ignoreAlPackages;
             this.IgnoreUePackages = ignoreUePackages;
             this.CalculatePackagesWithMaxUe = this.IgnoreUePackages ? false : calculateWithMaxUe;
-            this.FillDefaultParams = fillDefaultParams;
+            this.FillWithDefaultParams = fillWithDefaultParams;
         }
     }
 }

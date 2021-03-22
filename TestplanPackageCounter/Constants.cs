@@ -2,20 +2,16 @@
 {
     public class Constants
     {
-        internal const string NonExistString = "[NonExistString]";
+        internal const string AnalyticsInitMode = "BeforeTest";
 
-        internal const string AnalyticsInitMode = "None";
+        internal const string None = "None";
 
-        internal const string AppProject = "None";
+        internal const string NotChange = "NotChange";
 
-        internal const string CleaningMode = "None";
+        internal const string Change = "Change";
 
-        internal const string RestartMode = "None";
+        internal const string AppProject = "Win10";
 
-        internal const int DefaultPackagesCount = 0;
-
-        internal const string ReverseAdvertisment = "NotChange";        
-
-        internal const int RestartTimeOut = 0;
+        internal const int IntegerZero = 0;
     }
 }
