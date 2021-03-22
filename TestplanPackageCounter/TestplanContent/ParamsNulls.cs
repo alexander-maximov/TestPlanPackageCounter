@@ -39,11 +39,11 @@ namespace TestplanPackageCounter.TestplanContent
 
         [JsonProperty("DefaultPackagesCount", Order = 8)]
         [JsonRequired]
-        public int DefaultPackagesCount { get; private set; }
+        public int DefaultPackagesCount { get; set; }
 
         [JsonProperty("PlatformPackagesCount", Order = 9)]
         [DefaultValue(null)]
-        public PlatformPackages PlatformPackagesCount { get; private set; }
+        public PlatformPackages PlatformPackagesCount { get; set; }
 
         [JsonProperty("TimeOut", Order = 10)]
         [DefaultValue(null)]

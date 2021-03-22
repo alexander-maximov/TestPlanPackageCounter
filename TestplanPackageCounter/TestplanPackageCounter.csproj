@@ -48,23 +48,23 @@
   <ItemGroup>
     <Compile Include="Constants.cs" />
     <Compile Include="Converters\ParamsConverter.cs" />
-    <Compile Include="Converters\TestConverter.cs" />
     <Compile Include="CounterSettings.cs" />
-    <Compile Include="PackagesEnumerator.cs" />
+    <Compile Include="UglyCode\PackagesEnumerator.cs" />
     <Compile Include="PlatformPackages.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestplanContent\Params.cs" />
     <Compile Include="TestplanContent\ParamsDefault.cs" />
-    <Compile Include="TestplanContent\ParamslessTest.cs" />
     <Compile Include="TestplanContent\ParamsNulls.cs" />
     <Compile Include="TestplanContent\PlatformPackages.cs" />
-    <Compile Include="TestplanContent\ParamsTest.cs" />
+    <Compile Include="TestplanContent\Test.cs" />
     <Compile Include="TestplanContent\TestSuite.cs" />
+    <Compile Include="UglyCode\TestSuiteEditor.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

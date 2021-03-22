@@ -7,22 +7,22 @@
     {
         [JsonProperty("Android")]
         [DefaultValue(null)]
-        public int? Android { get; private set; }
+        public int? Android { get; set; }
 
         [JsonProperty("IOS")]
         [DefaultValue(null)]
-        public int? Ios { get; private set; }
+        public int? Ios { get; set; }
 
         [JsonProperty("MacOS")]
         [DefaultValue(null)]
-        public int? MacOS { get; private set; }
+        public int? MacOS { get; set; }
 
         [JsonProperty("UWP")]
         [DefaultValue(null)]
-        public int? Uwp { get; private set; }
+        public int? Uwp { get; set; }
 
         [JsonProperty("Windows")]
         [DefaultValue(null)]
-        public int? Windows { get; private set; }
+        public int? Windows { get; set; }
     }
 }

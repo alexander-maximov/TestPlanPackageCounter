@@ -15,6 +15,6 @@
 
         [JsonProperty("Tests", Order = 2)]
         [JsonRequired]
-        public List<ParamslessTest> Tests { get; private set; }
+        public List<Test> Tests { get; private set; }
     }
 }
