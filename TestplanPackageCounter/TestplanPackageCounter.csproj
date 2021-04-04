@@ -49,6 +49,7 @@
     <Compile Include="Constants.cs" />
     <Compile Include="Converters\ParamsConverter.cs" />
     <Compile Include="CounterSettings.cs" />
+    <Compile Include="Platforms.cs" />
     <Compile Include="UglyCode\PackagesEnumerator.cs" />
     <Compile Include="PlatformPackages.cs" />
     <Compile Include="Program.cs" />
@@ -59,7 +60,7 @@
     <Compile Include="TestplanContent\PlatformPackages.cs" />
     <Compile Include="TestplanContent\Test.cs" />
     <Compile Include="TestplanContent\TestSuite.cs" />
-    <Compile Include="UglyCode\TestSuiteEditor.cs" />
+    <Compile Include="UglyCode\TestPlanEditor.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

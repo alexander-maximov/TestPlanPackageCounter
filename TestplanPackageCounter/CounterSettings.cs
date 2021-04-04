@@ -18,6 +18,8 @@
 
         internal bool FillWithDefaultParams { get; }
 
+        internal bool WriteToCsv { get; }
+
         public CounterSettings(
             string pathToTestplan,
             string outcomingPath,
@@ -26,7 +28,8 @@
             bool ignoreUePackages,
             bool ignoreAlPackages,
             bool calculateWithMaxUe,
-            bool fillWithDefaultParams
+            bool fillWithDefaultParams,
+            bool writeToCsv
         )
         {
             this.PathToTestplan = pathToTestplan;
@@ -35,8 +38,9 @@
             this.RewriteTestplan = rewriteTestplan;
             this.IgnoreAlPackages = ignoreAlPackages;
             this.IgnoreUePackages = ignoreUePackages;
-            this.CalculatePackagesWithMaxUe = this.IgnoreUePackages ? false : calculateWithMaxUe;
+            this.CalculatePackagesWithMaxUe = calculateWithMaxUe;
             this.FillWithDefaultParams = fillWithDefaultParams;
+            this.WriteToCsv = writeToCsv;
         }
     }
 }

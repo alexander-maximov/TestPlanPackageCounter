@@ -8,50 +8,53 @@ namespace TestplanPackageCounter.UglyCode
 {
     internal class PackagesEnumerator
     {
+        private readonly CounterSettings _counterSettings;
+
+        internal PackagesEnumerator(CounterSettings counterSettings)
+        {
+            this._counterSettings = counterSettings;
+        }
+
         internal Dictionary<string, int> MaxUeDictionary { get; set; }
 
-        internal Dictionary<string, Dictionary<string, string>> PackagesDictionary { get; set; }
+        internal Dictionary<string, Dictionary<string, int>> PackagesDictionary { get; set; }
 
         internal void Enumerate()
         {
             this.MaxUeDictionary = new Dictionary<string, int>();
 
-            bool withoutSingleUeEvents = true;
-
-            Dictionary<string, Dictionary<string, string>> packagesDictionary =
-                    new Dictionary<string, Dictionary<string, string>>();
-
-            List<string> platformList = new List<string>();
-
-            string resultsPath = @"C:\Users\at\Downloads\results (1)";
-
-            GetPlatformList(platformList, resultsPath);
-
-            var csvContent = new StringBuilder();
+            List<string> platformList = this.GetPlatformList(this._counterSettings.PathToResults);            
 
             //Read in dict
-            FillPackageDictionary(withoutSingleUeEvents, packagesDictionary, resultsPath);
+            Dictionary<string, Dictionary<string, int>> packagesDictionary = 
+                this.FillPackageDictionary();
 
             //Convert dict to another
             this.PackagesDictionary =
                 ConvertPackageDictionary(packagesDictionary, platformList);
 
-            //Write to csv.
-
-            //WriteToCsv(resultsPath, csvContent, convertedDictionary);
+            if (this._counterSettings.WriteToCsv)
+            {
+                WriteToCsv();
+            }
         }
 
-        private static void WriteToCsv(string resultsPath, StringBuilder csvContent, Dictionary<string, Dictionary<string, string>> convertedDictionary)
+        private void WriteToCsv()
         {
-            GenerateTitleLine(resultsPath, csvContent);
-            GenerateRestContent(csvContent, convertedDictionary);
+            StringBuilder csvContent = new StringBuilder();
 
-            string filePath = Path.Combine(resultsPath, "packagesCountNew.csv");
+            GenerateTitleLine(this._counterSettings.PathToResults, csvContent);
+            GenerateRestContent(csvContent, this.PackagesDictionary);
+
+            string filePath = Path.Combine(this._counterSettings.PathToResults, "packagesCountNew.csv");
 
             File.WriteAllText(filePath, csvContent.ToString());
         }
 
-        private static void GenerateRestContent(StringBuilder csvContent, Dictionary<string, Dictionary<string, string>> convertedDictionary)
+        private static void GenerateRestContent(
+            StringBuilder csvContent, 
+            Dictionary<string, Dictionary<string, int>> convertedDictionary
+        )
         {
             foreach (var testName in convertedDictionary)
             {
@@ -64,25 +67,41 @@ namespace TestplanPackageCounter.UglyCode
                 }
 
                 string newLine = string.Format("{0}{1}", nameofTest, packagesCount);
+
                 csvContent.AppendLine(newLine);
             }            
         }
 
-        private static void GenerateTitleLine(string resultsPath, StringBuilder csvContent)
+        private void GenerateTitleLine(string resultsPath, StringBuilder csvContent)
         {
-            string titleLine = "-";
+            string titleLine = "";
+
+            if (this._counterSettings.IgnoreUePackages)
+            {
+                titleLine = this._counterSettings.CalculatePackagesWithMaxUe
+                    ? "With max Ue count" 
+                    : "Ue packages ignored";
+            }
+            else
+            {
+                titleLine = "All packages counted";
+            }
 
             foreach (string directory in Directory.GetDirectories(resultsPath))
             {
                 titleLine += $",{Path.GetFileName(directory)}";
             }
+
             csvContent.AppendLine(titleLine);
         }
 
-        private static Dictionary<string, Dictionary<string, string>> ConvertPackageDictionary(Dictionary<string, Dictionary<string, string>> packagesDictionary, List<string> platformList)
+        private static Dictionary<string, Dictionary<string, int>> ConvertPackageDictionary(
+            Dictionary<string, Dictionary<string, int>> packagesDictionary, 
+            List<string> platformList
+        )
         {
-            Dictionary<string, Dictionary<string, string>> convertedDictionary =
-                            new Dictionary<string, Dictionary<string, string>>();
+            Dictionary<string, Dictionary<string, int>> convertedDictionary = 
+                new Dictionary<string, Dictionary<string, int>>();
 
             foreach (var platform in packagesDictionary)
             {
@@ -96,8 +115,11 @@ namespace TestplanPackageCounter.UglyCode
                         continue;
                     }
 
-                    Dictionary<string, string> innerDictionary = new Dictionary<string, string>();
-                    innerDictionary.Add(platform.Key, testName.Value);
+                    Dictionary<string, int> innerDictionary = new Dictionary<string, int>
+                    {
+                        { platform.Key, testName.Value }
+                    };
+
                     convertedDictionary.Add(upperKey, innerDictionary);
                 }
             }
@@ -108,7 +130,7 @@ namespace TestplanPackageCounter.UglyCode
                 {
                     if (!testName.Value.Keys.Contains(platformName))
                     {
-                        testName.Value.Add(platformName, "not exist on platform");
+                        testName.Value.Add(platformName, -1);
                     }
                 }
             }
@@ -116,47 +138,48 @@ namespace TestplanPackageCounter.UglyCode
             return convertedDictionary;
         }
 
-        private void FillPackageDictionary(bool withoutSingleUeEvents, Dictionary<string, Dictionary<string, string>> packagesDictionary, string resultsPath)
+        private Dictionary<string, Dictionary<string, int>> FillPackageDictionary()
         {
-            foreach (string directory in Directory.GetDirectories(resultsPath))
+            Dictionary<string, Dictionary<string, int>> packagesDictionary =
+                new Dictionary<string, Dictionary<string, int>>();
+
+            foreach (string directory in Directory.GetDirectories(this._counterSettings.PathToResults))
             {
                 string platformName = Path.GetFileName(directory);                
 
-                Dictionary<string, string> testPackagesDictionary = new Dictionary<string, string>();
+                Dictionary<string, int> testPackagesDictionary = new Dictionary<string, int>();
 
                 foreach (string subDirectory in Directory.GetDirectories(directory))
                 {
+                    string[] jsonFiles = Directory.GetFiles(subDirectory, "*.json");
+
                     string testName = Path.GetFileName(subDirectory);
 
                     int maxUeCount = 0;
+                    int packagesCount = jsonFiles.Length;
 
-                    string[] jsonFiles = Directory.GetFiles(subDirectory, "*.json");
-
-                    string packagesCount =
-                        jsonFiles.Length.ToString();                    
-
-                    if (withoutSingleUeEvents)
+                    if (this._counterSettings.IgnoreUePackages)
                     {
-                        int withoutUeCount = Convert.ToInt32(packagesCount);
                         int ueCount = 0;
+
                         foreach (var jsonFile in jsonFiles)
                         {
                             IEnumerable<string> ueLines = File.ReadLines(jsonFile).Skip(4).Take(9);
 
-                            if (ueLines.First().Contains("ue")
-                                && ueLines.Last().Contains("}")
-                            )
+                            if (ueLines.First().Contains("ue") && ueLines.Last().Contains("}"))
                             {
-                                withoutUeCount--;
+                                packagesCount--;
                                 ueCount++;
                             }
+
                             continue;
                         }
-                        packagesCount = $"{withoutUeCount}";
 
-                        if (ueCount > maxUeCount)
+                        maxUeCount = ueCount > maxUeCount ? ueCount : maxUeCount;
+
+                        if (this._counterSettings.CalculatePackagesWithMaxUe)
                         {
-                            maxUeCount = ueCount;
+                            packagesCount += maxUeCount;
                         }
                     }
 
@@ -174,15 +197,22 @@ namespace TestplanPackageCounter.UglyCode
 
                 packagesDictionary.Add(platformName, testPackagesDictionary);                
             }
+
+            return packagesDictionary;
         }
 
-        private static void GetPlatformList(List<string> platformList, string resultsPath)
+        private List<string> GetPlatformList(string resultsPath)
         {
+            List<string> platformList = new List<string>();
+
             foreach (string directory in Directory.GetDirectories(resultsPath))
             {
                 string platformName = Path.GetFileName(directory);
+
                 platformList.Add(platformName);
             }
+
+            return platformList;
         }
     }
 }

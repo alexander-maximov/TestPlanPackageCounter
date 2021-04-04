@@ -1,6 +1,7 @@
 ﻿namespace TestplanPackageCounter
 {
     using Newtonsoft.Json;
+    using System;
     using System.Collections.Generic;
     using System.IO;
     using TestplanPackageCounter.Converters;
@@ -14,18 +15,24 @@
             CounterSettings counterSettings = new CounterSettings(
                 pathToTestplan: @"C:\Users\at\Documents\Backup\testplan.json",
                 outcomingPath: @"C:\Users\at\Documents\Backup\testplan_edited.json",
-                pathToResults: @"null",
-                rewriteTestplan: false,
-                ignoreUePackages: false,
+                pathToResults: @"C:\Users\at\Downloads\mergeResults\results",
+                rewriteTestplan: true,
+                ignoreUePackages: true,
                 ignoreAlPackages: false,
-                calculateWithMaxUe: false,
-                fillWithDefaultParams: false
+                calculateWithMaxUe: true,
+                fillWithDefaultParams: false,
+                writeToCsv: true
             );
 
-            PackagesEnumerator packagesEnumerator = new PackagesEnumerator();
+            Console.WriteLine("Settings loaded.");
+            Console.Write("Calculating packages count...");
+
+            PackagesEnumerator packagesEnumerator = new PackagesEnumerator(counterSettings);
             packagesEnumerator.Enumerate();
 
-            Dictionary<string, Dictionary<string, string>> packagesDictionary =
+            Console.WriteLine("Done.");
+
+            Dictionary<string, Dictionary<string, int>> packagesDictionary =
                 packagesEnumerator.PackagesDictionary;
 
             JsonSerializerSettings serializerSettings = new JsonSerializerSettings 
@@ -34,20 +41,29 @@
                 NullValueHandling = NullValueHandling.Ignore
             };
 
-            serializerSettings.Converters.Add(new ParamsConverter(counterSettings.FillWithDefaultParams));
+            serializerSettings.Converters.Add(
+                new ParamsConverter(counterSettings.FillWithDefaultParams)
+            );
 
             string testplanContent = File.ReadAllText(counterSettings.PathToTestplan);
 
-            List<TestSuite> testSuites = 
-                JsonConvert.DeserializeObject<List<TestSuite>>(testplanContent, serializerSettings);
+            if (counterSettings.RewriteTestplan)
+            {
+                List<TestSuite> testSuites =
+                    JsonConvert.DeserializeObject<List<TestSuite>>(testplanContent, serializerSettings);
 
-            TestSuiteEditor testSuiteEditor = 
-                new TestSuiteEditor(testSuites, packagesDictionary, packagesEnumerator.MaxUeDictionary);
-            testSuiteEditor.EditTestSuites();
+                TestPlanEditor testSuiteEditor = new TestPlanEditor(
+                    testSuites,
+                    packagesDictionary,
+                    packagesEnumerator.MaxUeDictionary
+                );
+                testSuiteEditor.EditTestSuites();
 
-            string serializedJson = JsonConvert.SerializeObject(testSuites, Formatting.Indented, serializerSettings);
+                string serializedJson =
+                    JsonConvert.SerializeObject(testSuites, Formatting.Indented, serializerSettings);
 
-            File.WriteAllText(counterSettings.OutcomingPath, serializedJson);
+                File.WriteAllText(counterSettings.OutcomingPath, serializedJson);
+            }
 
             //TODO: count without Al
             //TODO: write to csv
