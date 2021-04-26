@@ -38,6 +38,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -46,26 +47,71 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Constants.cs" />
-    <Compile Include="Converters\ParamsConverter.cs" />
-    <Compile Include="CounterSettings.cs" />
-    <Compile Include="Platforms.cs" />
+    <Compile Include="Counter\PackageTypesCounter.cs" />
+    <Compile Include="General\Constants.cs" />
+    <Compile Include="General\EscapedStringResolver.cs" />
+    <Compile Include="General\EventExtensions.cs" />
+    <Compile Include="Packages\Content\V1\Events\IHasTimestamp.cs" />
+    <Compile Include="Packages\Converters\EntryConverter.cs" />
+    <Compile Include="Packages\Converters\V1\CommonConverter.cs" />
+    <Compile Include="Packages\Converters\V1\EventsArrayConverter.cs" />
+    <Compile Include="Packages\Converters\V1\LuDataConverter.cs" />
+    <Compile Include="Packages\Converters\V1\RequestJsonConverter.cs" />
+    <Compile Include="Testplan\Converters\ParamsConverter.cs" />
+    <Compile Include="Counter\CounterSettings.cs" />
+    <Compile Include="Packages\Content\General\ProxyPackageInfo.cs" />
+    <Compile Include="Packages\Content\General\AbstractData.cs" />
+    <Compile Include="Packages\Content\V1\Events\AbstractSdkEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\AbstractSocialEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\AiEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\AlEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\CeEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\DiEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\Entries\CeEntry.cs" />
+    <Compile Include="Packages\Content\V1\Events\Entries\CeEntryParam.cs" />
+    <Compile Include="Packages\Content\V1\Events\Entries\RpEntries.cs" />
+    <Compile Include="Packages\Content\V1\Events\IpEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\PeEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\PlEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\RfEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\RpEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\ScEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\SpEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\SsEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\TrEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\TsEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\UeEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\UiEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\UpperLevelEvents\LuEvent.cs" />
+    <Compile Include="Packages\Content\V1\Events\UpperLevelEvents\LuData.cs" />
+    <Compile Include="Packages\Content\V1\Events\UpperLevelEvents\ProxyPackageInfoV1.cs" />
+    <Compile Include="Packages\Content\V1\Events\UpperLevelEvents\RequestJsonContainerV1.cs" />
+    <Compile Include="Packages\Content\V1\Events\UpperLevelEvents\ResponseJsonDataV1.cs" />
+    <Compile Include="Packages\Content\V1\Events\UpperLevelEvents\SdkVersionData.cs" />
+    <Compile Include="Packages\Content\V1\EventType.cs" />
+    <Compile Include="Packages\Content\V1\Events\UserData.cs" />
+    <Compile Include="General\Platforms.cs" />
+    <Compile Include="General\SdkVersions.cs" />
     <Compile Include="UglyCode\PackagesEnumerator.cs" />
-    <Compile Include="PlatformPackages.cs" />
+    <Compile Include="Counter\PlatformPackagesCount.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TestplanContent\Params.cs" />
-    <Compile Include="TestplanContent\ParamsDefault.cs" />
-    <Compile Include="TestplanContent\ParamsNulls.cs" />
-    <Compile Include="TestplanContent\PlatformPackages.cs" />
-    <Compile Include="TestplanContent\Test.cs" />
-    <Compile Include="TestplanContent\TestSuite.cs" />
+    <Compile Include="Testplan\Content\Params.cs" />
+    <Compile Include="Testplan\Content\ParamsDefault.cs" />
+    <Compile Include="Testplan\Content\ParamsNulls.cs" />
+    <Compile Include="Testplan\Content\PlatformPackages.cs" />
+    <Compile Include="Testplan\Content\Test.cs" />
+    <Compile Include="Testplan\Content\TestSuite.cs" />
     <Compile Include="UglyCode\TestPlanEditor.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Packages\Content\V2\" />
+    <Folder Include="Packages\Converters\General\" />
+    <Folder Include="Packages\Converters\V2\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

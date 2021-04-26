@@ -4,8 +4,10 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
-    using TestplanPackageCounter.Converters;
-    using TestplanPackageCounter.TestplanContent;
+    using TestplanPackageCounter.Counter;
+    using TestplanPackageCounter.General;
+    using TestplanPackageCounter.Testplan.Content;
+    using TestplanPackageCounter.Testplan.Converters;
     using TestplanPackageCounter.UglyCode;
 
     class Program
@@ -16,9 +18,10 @@
                 pathToTestplan: @"C:\Users\at\Documents\Backup\testplan.json",
                 outcomingPath: @"C:\Users\at\Documents\Backup\testplan_edited.json",
                 pathToResults: @"C:\Users\at\Downloads\mergeResults\results",
+                sdkVersion: SdkVersions.V1,
                 rewriteTestplan: true,
                 ignoreUePackages: true,
-                ignoreAlPackages: false,
+                ignoreLastUe: true,
                 calculateWithMaxUe: true,
                 fillWithDefaultParams: false,
                 writeToCsv: true

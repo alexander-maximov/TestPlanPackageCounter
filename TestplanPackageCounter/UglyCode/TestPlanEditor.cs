@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq; 
-using TestplanPackageCounter.TestplanContent;
+using System.Linq;
+using TestplanPackageCounter.Counter;
+using TestplanPackageCounter.General;
+using TestplanPackageCounter.Testplan.Content;
 
 namespace TestplanPackageCounter.UglyCode
 {
@@ -100,7 +102,7 @@ namespace TestplanPackageCounter.UglyCode
                     }
                     else
                     {
-                        PlatformPackages platformPackages = new PlatformPackages
+                        PlatformPackagesCount platformPackages = new PlatformPackagesCount
                         {
                             //TODO: under function
                             /*
@@ -143,7 +145,7 @@ namespace TestplanPackageCounter.UglyCode
 
                         //Find minimum ends
 
-                        testData.PlatformPackagesCount = new TestplanContent.PlatformPackages
+                        testData.PlatformPackagesCount = new Testplan.Content.PlatformPackages
                         {
                             Android = platformPackages.AndroidPackages != min ? platformPackages.AndroidPackages : null,
                             Ios = platformPackages.IosPackages != min ? platformPackages.IosPackages : null,
