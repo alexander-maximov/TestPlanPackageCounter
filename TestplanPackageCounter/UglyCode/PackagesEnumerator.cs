@@ -40,17 +40,13 @@ namespace TestplanPackageCounter.UglyCode
             //Gets packages content
             this.DeserializeAllPackagesInresults();
 
-            this.EnumeratePackages();
-
-            #region obsolete
             //Read in dict
-            Dictionary<string, Dictionary<string, int>> packagesDictionary = 
-                this.FillPackageDictionary();            
+            Dictionary<string, Dictionary<string, int>> packagesDictionary =
+                this.EnumeratePackages();
 
             //Convert dict to another
             this.PackagesDictionary =
                 ConvertPackageDictionary(packagesDictionary, platformList);
-            #endregion
 
             if (this._counterSettings.WriteToCsv)
             {
@@ -58,15 +54,15 @@ namespace TestplanPackageCounter.UglyCode
             }
         }
 
-        private void EnumeratePackages()
+        private Dictionary<string, Dictionary<string, int>> EnumeratePackages()
         {
-            Dictionary<string, Dictionary<string, Dictionary<EventType, int>>> packagesCountDictionary =
-                new Dictionary<string, Dictionary<string, Dictionary<EventType, int>>>();
+            Dictionary<string, Dictionary<string, int>> packagesCountDictionary =
+                new Dictionary<string, Dictionary<string, int>>();
 
             foreach (var deserializedPlatformPackages in this._allPackagesDeserialized)
             {
-                Dictionary<string, Dictionary<EventType, int>> platformPackagesCount =
-                    new Dictionary<string, Dictionary<EventType, int>>();
+                Dictionary<string, int> platformPackagesCount =
+                    new Dictionary<string, int>();
 
                 string platformName = deserializedPlatformPackages.Key;
 
@@ -79,30 +75,127 @@ namespace TestplanPackageCounter.UglyCode
 
                     List<ProxyPackageInfoV1> testPackages = deserializedTestPackages.Value;
 
+                    int packagesCount = 0;
+
+                    int notLuEventPackagesCount = this.CountNonLuEventPackages(testPackages);
+
                     IEnumerable<Dictionary<int, LuEvent>> luEventList = testPackages.GetAllLuEvents();
+                    IEnumerable<Dictionary<EventType, AbstractSdkEvent[]>> levelSubeventsList =
+                        luEventList.GetAllLevelSubevents();
+                    IEnumerable<AbstractSdkEvent> allSubvents = 
+                        levelSubeventsList.GetAllSubevents();
 
-                    IEnumerable<Dictionary<EventType, AbstractSdkEvent[]>> subEventsPackedList =
-                        luEventList.GetAllSubeventsByPackages();
+                    UeEvent lastUeEvent = this.GetLastUeEvent(allSubvents);
 
-                    IEnumerable<AbstractSdkEvent> allSubEvents = subEventsPackedList.GetAllSubevents();
+                    Dictionary<EventType, AbstractSdkEvent[]> levelSubeventWithLastUe = 
+                        levelSubeventsList.FindSubeventPackForEvent(lastUeEvent, false);
+                    Dictionary<int, LuEvent> luEventWithLastUe = 
+                        luEventList.FindLuEventForEventsPack(levelSubeventWithLastUe, false);
 
-                    IEnumerable<IHasTimestamp> timeStampEvents = allSubEvents.OfType<IHasTimestamp>().OrderBy(item => item.Timestamp);
-                    IEnumerable<UeEvent> ueEvents = allSubEvents.OfType<UeEvent>();
+                    IEnumerable<UeEvent> ueEventsList = 
+                        luEventList.AllSubeventsOfType<UeEvent>();
 
-                    if (timeStampEvents != null && ueEvents != null)
-                    {
-                        UeEvent lastUeEvent = ueEvents.Last();
+                    int luEventPackagesCount = luEventList.Count();
 
-                        if (timeStampEvents.Last() is UeEvent lastTimestampEvent)
-                        {
-                            if (lastUeEvent == lastTimestampEvent)
-                            {
-                                //IGNORE!
-                            }
-                        }
-                    }
+                    List<Dictionary<int, LuEvent>> uePackages =
+                        (List<Dictionary<int, LuEvent>>)this.FindPackagesForSubevents(ueEventsList, luEventList);
+
+                    luEventPackagesCount -= uePackages.Count;
+
+                    uePackages.Remove(luEventWithLastUe);
+
+                    packagesCount = luEventPackagesCount + notLuEventPackagesCount;
+
+                    int maxUePackagesCount = uePackages.Count;
+
+                    platformPackagesCount.Add(testName, packagesCount);
+
+                    //TODO: maxUeDictionary count.
+                    //TODO: make this class pretty.
+                }
+
+                packagesCountDictionary.Add(platformName, platformPackagesCount);
+            }
+
+            return packagesCountDictionary;
+        }
+
+        private IEnumerable<Dictionary<int, LuEvent>> FindPackagesForSubevents(
+            IEnumerable<AbstractSdkEvent> subevents,
+            IEnumerable<Dictionary<int, LuEvent>> luEvents
+        )
+        {
+            var levelSubevents = luEvents.GetAllLevelSubevents();
+
+            var foundedSubevents = new List<Dictionary<EventType, AbstractSdkEvent[]>>();
+
+            foreach (var subevent in subevents)
+            {
+                Dictionary<EventType, AbstractSdkEvent[]> foundedSubevent = 
+                    levelSubevents.FindSubeventPackForEvent(subevent, false);
+
+                foundedSubevents.Add(foundedSubevent);
+            }
+
+            var foundedLuEvents = new List<Dictionary<int, LuEvent>>();
+
+            foreach (var foundedSubevent in foundedSubevents)
+            {
+                Dictionary<int, LuEvent> foundedLuEvent = 
+                    luEvents.FindLuEventForEventsPack(foundedSubevent);
+
+                foundedLuEvents.Add(foundedLuEvent);
+            }
+
+            return foundedLuEvents;
+        }
+
+        /// <summary>
+        /// Returns count of packages, not contains LuEvent. I.e. Sdk version info etc.
+        /// </summary>
+        /// <param name="packagesList">List of packages.</param>
+        /// <returns>Count of non-LuEvent packages.</returns>
+        private int CountNonLuEventPackages(IEnumerable<ProxyPackageInfoV1> packagesList)
+        {
+            int nonLuEventCount = 0;
+
+            foreach (var package in packagesList)
+            {
+                if (package.RequestJson is LuData luData)
+                {
+                    continue;
+                }
+
+                nonLuEventCount++;
+            }
+
+            return nonLuEventCount;
+        }
+
+        /// <summary>
+        /// Searches for last UeEvent in all events which contains timestamp.
+        /// </summary>
+        /// <param name="allSubEvents">Subevents to search.</param>
+        /// <returns>UeEvent or null.</returns>
+        private UeEvent GetLastUeEvent(IEnumerable<AbstractSdkEvent> allSubEvents)
+        {
+            IEnumerable<IHasTimestamp> timeStampEvents =
+                        allSubEvents.OfType<IHasTimestamp>().OrderBy(item => item.Timestamp);
+            IEnumerable<UeEvent> ueEvents = allSubEvents.OfType<UeEvent>();
+
+            if (timeStampEvents.Count() != 0 && ueEvents.Count() != 0)
+            {
+                UeEvent lastUeEvent = ueEvents.Last();
+
+                if (timeStampEvents.Last() is UeEvent lastTimestampEvent 
+                    && lastUeEvent == lastTimestampEvent
+                )
+                {
+                    return lastUeEvent;
                 }
             }
+
+            return null;
         }
 
         private void DeserializeAllPackagesInresults()
