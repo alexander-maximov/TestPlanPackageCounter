@@ -38,7 +38,7 @@ namespace TestplanPackageCounter.UglyCode
             List<string> platformList = this.GetPlatformList(this._counterSettings.PathToResults);
 
             //Gets packages content
-            this.DeserializeAllPackagesInresults();
+            this.DeserializeAllPackagesInResults();
 
             //Read in dict
             Dictionary<string, Dictionary<string, int>> packagesDictionary =
@@ -109,6 +109,19 @@ namespace TestplanPackageCounter.UglyCode
                     int maxUePackagesCount = uePackages.Count;
 
                     platformPackagesCount.Add(testName, packagesCount);
+
+                    string ueDictionaryTestName = testName.ToUpper();
+
+                    if (this.MaxUeDictionary.ContainsKey(ueDictionaryTestName))
+                    {
+                        this.MaxUeDictionary[ueDictionaryTestName] = maxUePackagesCount > this.MaxUeDictionary[ueDictionaryTestName] 
+                            ? maxUePackagesCount 
+                            : this.MaxUeDictionary[ueDictionaryTestName];
+                    }
+                    else
+                    {
+                        this.MaxUeDictionary.Add(ueDictionaryTestName, maxUePackagesCount);
+                    }
 
                     //TODO: maxUeDictionary count.
                     //TODO: make this class pretty.
@@ -198,7 +211,7 @@ namespace TestplanPackageCounter.UglyCode
             return null;
         }
 
-        private void DeserializeAllPackagesInresults()
+        private void DeserializeAllPackagesInResults()
         {
             JsonSerializerSettings packageSerializationSettings = new JsonSerializerSettings
             {
