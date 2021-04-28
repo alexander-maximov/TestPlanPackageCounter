@@ -7,7 +7,6 @@ using System.Linq;
 using System.Text;
 using TestplanPackageCounter.Counter;
 using TestplanPackageCounter.General;
-using TestplanPackageCounter.Packages.Content.General;
 using TestplanPackageCounter.Packages.Content.V1;
 using TestplanPackageCounter.Packages.Content.V1.Events;
 using TestplanPackageCounter.Packages.Content.V1.Events.UpperLevelEvents;
@@ -31,22 +30,20 @@ namespace TestplanPackageCounter.UglyCode
 
         internal Dictionary<string, Dictionary<string, int>> PackagesDictionary { get; set; }
 
-        internal void Enumerate()
+        private List<string> _platformList = new List<string>();
+
+        internal void Enumerate(Dictionary<string, bool> testBeforeCleanDictionary)
         {
             this.MaxUeDictionary = new Dictionary<string, int>();
 
-            List<string> platformList = this.GetPlatformList(this._counterSettings.PathToResults);
+            this._platformList = this.GetPlatformList(this._counterSettings.PathToResults);
 
             //Gets packages content
             this.DeserializeAllPackagesInResults();
 
             //Read in dict
-            Dictionary<string, Dictionary<string, int>> packagesDictionary =
-                this.EnumeratePackages();
-
-            //Convert dict to another
             this.PackagesDictionary =
-                ConvertPackageDictionary(packagesDictionary, platformList);
+                ConvertPackageDictionary(this.EnumeratePackages(testBeforeCleanDictionary));            
 
             if (this._counterSettings.WriteToCsv)
             {
@@ -54,7 +51,13 @@ namespace TestplanPackageCounter.UglyCode
             }
         }
 
-        private Dictionary<string, Dictionary<string, int>> EnumeratePackages()
+        /// <summary>
+        /// Calculates packages in giver result folder.
+        /// </summary>
+        /// <returns>Platform separated dictionary of dictionary of test and packages.</returns>
+        private Dictionary<string, Dictionary<string, int>> EnumeratePackages(
+            Dictionary<string, bool> testBeforeCleanDictionary
+        )
         {
             Dictionary<string, Dictionary<string, int>> packagesCountDictionary =
                 new Dictionary<string, Dictionary<string, int>>();
@@ -102,7 +105,11 @@ namespace TestplanPackageCounter.UglyCode
 
                     luEventPackagesCount -= uePackages.Count;
 
-                    uePackages.Remove(luEventWithLastUe);
+                    if (testBeforeCleanDictionary.ContainsKey(testName.ToUpper())
+                        && testBeforeCleanDictionary[testName.ToUpper()])
+                    {
+                        uePackages.Remove(luEventWithLastUe);
+                    }
 
                     packagesCount = luEventPackagesCount + notLuEventPackagesCount;
 
@@ -123,8 +130,7 @@ namespace TestplanPackageCounter.UglyCode
                         this.MaxUeDictionary.Add(ueDictionaryTestName, maxUePackagesCount);
                     }
 
-                    //TODO: maxUeDictionary count.
-                    //TODO: make this class pretty.
+                    //TODO: make this class looks pretty.
                 }
 
                 packagesCountDictionary.Add(platformName, platformPackagesCount);
@@ -133,6 +139,12 @@ namespace TestplanPackageCounter.UglyCode
             return packagesCountDictionary;
         }
 
+        /// <summary>
+        /// Finds packages list for list of subevents taken.
+        /// </summary>
+        /// <param name="subevents">List of subevents.</param>
+        /// <param name="luEvents">List of packages where to find.</param>
+        /// <returns>List of packages, contains subevents.</returns>
         private IEnumerable<Dictionary<int, LuEvent>> FindPackagesForSubevents(
             IEnumerable<AbstractSdkEvent> subevents,
             IEnumerable<Dictionary<int, LuEvent>> luEvents
@@ -211,6 +223,9 @@ namespace TestplanPackageCounter.UglyCode
             return null;
         }
 
+        /// <summary>
+        /// Deserialize all result packages and dictionary with packages data.
+        /// </summary>
         private void DeserializeAllPackagesInResults()
         {
             JsonSerializerSettings packageSerializationSettings = new JsonSerializerSettings
@@ -320,9 +335,15 @@ namespace TestplanPackageCounter.UglyCode
             csvContent.AppendLine(titleLine);
         }
 
-        private static Dictionary<string, Dictionary<string, int>> ConvertPackageDictionary(
-            Dictionary<string, Dictionary<string, int>> packagesDictionary, 
-            List<string> platformList
+        /// <summary>
+        /// Convert packages dictionary from platform separated dictionary of dictionary of test and packages count 
+        /// to dictionary of tests and packages count, separated by platform.
+        /// </summary>
+        /// <param name="packagesDictionary">Source dictionary.</param>
+        /// <param name="platformList">List of platforms to separate packages count.</param>
+        /// <returns>Dictionary of tests and packages count, separated by platform.</returns>
+        private Dictionary<string, Dictionary<string, int>> ConvertPackageDictionary(
+            Dictionary<string, Dictionary<string, int>> packagesDictionary
         )
         {
             Dictionary<string, Dictionary<string, int>> convertedDictionary = 
@@ -351,7 +372,7 @@ namespace TestplanPackageCounter.UglyCode
 
             foreach (var testName in convertedDictionary)
             {
-                foreach (var platformName in platformList)
+                foreach (var platformName in this._platformList)
                 {
                     if (!testName.Value.Keys.Contains(platformName))
                     {
@@ -361,69 +382,6 @@ namespace TestplanPackageCounter.UglyCode
             }
 
             return convertedDictionary;
-        }
-
-        private Dictionary<string, Dictionary<string, int>> FillPackageDictionary()
-        {
-            Dictionary<string, Dictionary<string, int>> packagesDictionary =
-                new Dictionary<string, Dictionary<string, int>>();
-
-            foreach (string directory in Directory.GetDirectories(this._counterSettings.PathToResults))
-            {
-                string platformName = Path.GetFileName(directory);                
-
-                Dictionary<string, int> testPackagesDictionary = new Dictionary<string, int>();
-
-                foreach (string subDirectory in Directory.GetDirectories(directory))
-                {
-                    string[] jsonFiles = Directory.GetFiles(subDirectory, "*.json");
-
-                    string testName = Path.GetFileName(subDirectory);
-
-                    int maxUeCount = 0;
-                    int packagesCount = jsonFiles.Length;
-
-                    if (this._counterSettings.IgnoreUePackages)
-                    {
-                        int ueCount = 0;
-
-                        foreach (var jsonFile in jsonFiles)
-                        {
-                            IEnumerable<string> ueLines = File.ReadLines(jsonFile).Skip(4).Take(9);
-
-                            if (ueLines.First().Contains("ue") && ueLines.Last().Contains("}"))
-                            {
-                                packagesCount--;
-                                ueCount++;
-                            }
-
-                            continue;
-                        }
-
-                        maxUeCount = ueCount > maxUeCount ? ueCount : maxUeCount;
-
-                        if (this._counterSettings.CalculatePackagesWithMaxUe)
-                        {
-                            packagesCount += maxUeCount;
-                        }
-                    }
-
-                    testPackagesDictionary.Add(testName, packagesCount);
-
-                    if (this.MaxUeDictionary.ContainsKey(testName.ToUpper()))
-                    {
-                        this.MaxUeDictionary[testName.ToUpper()] = maxUeCount;
-                    }
-                    else
-                    {
-                        this.MaxUeDictionary.Add(testName.ToUpper(), maxUeCount);
-                    }
-                }
-
-                packagesDictionary.Add(platformName, testPackagesDictionary);                
-            }
-
-            return packagesDictionary;
         }
 
         private List<string> GetPlatformList(string resultsPath)

@@ -119,7 +119,7 @@ namespace TestplanPackageCounter.UglyCode
                             WindowsPackages = this.GetPackagesCountByPlatform(this._packagesDictionary[fullTestname], Platforms.Windows)
                         };
 
-                        //Find minimum
+                        #region find minimum
 
                         int? min = platformPackages.AndroidPackages;
 
@@ -143,15 +143,15 @@ namespace TestplanPackageCounter.UglyCode
                             min = platformPackages.WindowsPackages;
                         }
 
-                        //Find minimum ends
+                        #endregion
 
-                        testData.PlatformPackagesCount = new Testplan.Content.PlatformPackages
+                        testData.PlatformPackagesCount = new PlatformPackages
                         {
                             Android = platformPackages.AndroidPackages != min ? platformPackages.AndroidPackages : null,
                             Ios = platformPackages.IosPackages != min ? platformPackages.IosPackages : null,
                             MacOS = platformPackages.MacOsPackages != min ? platformPackages.MacOsPackages : null,
                             Uwp = platformPackages.UwpPackages != min ? platformPackages.UwpPackages : null,
-                            Windows = platformPackages.WindowsPackages != min ? platformPackages.WindowsPackages: null
+                            Windows = null
                         };
 
                         bool allPackagesAreNull = 
@@ -166,7 +166,7 @@ namespace TestplanPackageCounter.UglyCode
                             testData.PlatformPackagesCount = null;
                         }
 
-                        testData.DefaultPackagesCount = (int)min;
+                        testData.DefaultPackagesCount = (int)platformPackages.WindowsPackages;
 
                         test.Params = testData;
                     }
