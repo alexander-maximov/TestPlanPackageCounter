@@ -39,7 +39,8 @@ namespace TestplanPackageCounter.UglyCode
 
         private int? GetPackagesCountByPlatform(
             Dictionary<string, int> testPackagesByPlatform, 
-            Platforms platform
+            Platforms platform,
+            int maxUe
         )
         {
             int maxCount = 0;
@@ -48,7 +49,7 @@ namespace TestplanPackageCounter.UglyCode
             {
                 if (testPackages.Key.Contains(patternsDictionary[platform]))
                 {
-                    int platformCount = testPackages.Value;
+                    int platformCount = testPackages.Value + maxUe;
 
                     maxCount = platformCount > maxCount ? platformCount : maxCount;
                 }
@@ -112,16 +113,16 @@ namespace TestplanPackageCounter.UglyCode
                             UwpPackages = this._packagesDictionary[fullTestname]["TestResults_uwpx64_NET_XAML"],
                             WindowsPackages = this._packagesDictionary[fullTestname]["TestResults_winx86_64_IL2CPP"]
                             */
-                            AndroidPackages = this.GetPackagesCountByPlatform(this._packagesDictionary[fullTestname], Platforms.Android),
-                            IosPackages = this.GetPackagesCountByPlatform(this._packagesDictionary[fullTestname], Platforms.IOS),
-                            MacOsPackages = this.GetPackagesCountByPlatform(this._packagesDictionary[fullTestname], Platforms.MacOS),
-                            UwpPackages = this.GetPackagesCountByPlatform(this._packagesDictionary[fullTestname], Platforms.Uwp),
-                            WindowsPackages = this.GetPackagesCountByPlatform(this._packagesDictionary[fullTestname], Platforms.Windows)
+                            AndroidPackages = this.GetPackagesCountByPlatform(this._packagesDictionary[fullTestname], Platforms.Android, maxUeCount),
+                            IosPackages = this.GetPackagesCountByPlatform(this._packagesDictionary[fullTestname], Platforms.IOS, maxUeCount),
+                            MacOsPackages = this.GetPackagesCountByPlatform(this._packagesDictionary[fullTestname], Platforms.MacOS, maxUeCount),
+                            UwpPackages = this.GetPackagesCountByPlatform(this._packagesDictionary[fullTestname], Platforms.Uwp, maxUeCount),
+                            WindowsPackages = this.GetPackagesCountByPlatform(this._packagesDictionary[fullTestname], Platforms.Windows, maxUeCount)
                         };
 
                         #region find minimum
 
-                        int? min = platformPackages.AndroidPackages;
+                        int? min = platformPackages.WindowsPackages;
 
                         if (platformPackages.IosPackages < min)
                         {
@@ -166,7 +167,7 @@ namespace TestplanPackageCounter.UglyCode
                             testData.PlatformPackagesCount = null;
                         }
 
-                        testData.DefaultPackagesCount = (int)platformPackages.WindowsPackages;
+                        testData.DefaultPackagesCount = (int)min;
 
                         test.Params = testData;
                     }

@@ -28,6 +28,8 @@ namespace TestplanPackageCounter.UglyCode
 
         internal Dictionary<string, int> MaxUeDictionary { get; set; }
 
+        internal Dictionary<string, Dictionary<string, (int, bool)>> PlatformUeDictionary { get; set; }
+
         internal Dictionary<string, Dictionary<string, int>> PackagesDictionary { get; set; }
 
         private List<string> _platformList = new List<string>();
@@ -35,6 +37,7 @@ namespace TestplanPackageCounter.UglyCode
         internal void Enumerate(Dictionary<string, bool> testBeforeCleanDictionary)
         {
             this.MaxUeDictionary = new Dictionary<string, int>();
+            this.PlatformUeDictionary = new Dictionary<string, Dictionary<string, (int, bool)>>();
 
             this._platformList = this.GetPlatformList(this._counterSettings.PathToResults);
 
@@ -43,7 +46,9 @@ namespace TestplanPackageCounter.UglyCode
 
             //Read in dict
             this.PackagesDictionary =
-                ConvertPackageDictionary(this.EnumeratePackages(testBeforeCleanDictionary));            
+                ConvertPackageDictionary(this.EnumeratePackages(testBeforeCleanDictionary));
+
+            this.CheckMaxUe();
 
             if (this._counterSettings.WriteToCsv)
             {
@@ -51,8 +56,90 @@ namespace TestplanPackageCounter.UglyCode
             }
         }
 
+        private Dictionary<string, Dictionary<string, (int, bool)>> TurnDictionary(
+            Dictionary<string, Dictionary<string, (int, bool)>> packagesDictionary
+        )
+        {
+            Dictionary<string, Dictionary<string, (int, bool)>> turnedDictionary =
+                new Dictionary<string, Dictionary<string, (int, bool)>>();
+
+            foreach (var platformContent in packagesDictionary)
+            {
+                foreach (var testContent in platformContent.Value)
+                {
+                    string upperKey = testContent.Key.ToUpper();
+
+                    if (turnedDictionary.ContainsKey(upperKey))
+                    {
+                        turnedDictionary[upperKey][platformContent.Key] = testContent.Value;
+                        continue;
+                    }
+
+                    Dictionary<string, (int, bool)> innerDictionary = new Dictionary<string, (int, bool)>
+                    {
+                        { platformContent.Key, testContent.Value }
+                    };
+
+                    turnedDictionary.Add(upperKey, innerDictionary);
+                }
+            }
+
+            foreach (var testName in turnedDictionary)
+            {
+                foreach (var platformName in this._platformList)
+                {
+                    if (!testName.Value.Keys.Contains(platformName))
+                    {
+                        testName.Value.Add(platformName, (-1, false));
+                    }
+                }
+            }
+
+            return turnedDictionary;
+        }
+
+        private void CheckMaxUe()
+        {
+            Dictionary<string, Dictionary<string, (int, bool)>> turnedPlatformPackages =
+                this.TurnDictionary(this.PlatformUeDictionary);
+
+            StringBuilder csvContent = new StringBuilder();
+
+            string titleLine = "Ue Count";
+
+            foreach (string platformName in this.PlatformUeDictionary.Keys)
+            {
+                titleLine += $",{platformName},Ue ignored";
+            }
+
+            titleLine += $",MaxUeCount";
+
+            csvContent.AppendLine(titleLine);
+
+            foreach (var testContent in turnedPlatformPackages)
+            {
+                string testName = testContent.Key;
+                string packagesInfo = "";
+
+                foreach (var platformContent in testContent.Value.OrderBy(e => e.Key))
+                {
+                    packagesInfo += $";{platformContent.Value.Item1};{platformContent.Value.Item2}";
+                }
+
+                packagesInfo += $";{this.MaxUeDictionary[testName]}";
+
+                string newLine = string.Format("{0}{1}", testName, packagesInfo);
+
+                csvContent.AppendLine(newLine);                
+            }
+
+            string filePath = Path.Combine(this._counterSettings.PathToResults, "ueCount.csv");
+
+            File.WriteAllText(filePath, csvContent.ToString());
+        }
+
         /// <summary>
-        /// Calculates packages in giver result folder.
+        /// Calculates packages in given result folder.
         /// </summary>
         /// <returns>Platform separated dictionary of dictionary of test and packages.</returns>
         private Dictionary<string, Dictionary<string, int>> EnumeratePackages(
@@ -77,8 +164,6 @@ namespace TestplanPackageCounter.UglyCode
                     string testName = deserializedTestPackages.Key;
 
                     List<ProxyPackageInfoV1> testPackages = deserializedTestPackages.Value;
-
-                    int packagesCount = 0;
 
                     int notLuEventPackagesCount = this.CountNonLuEventPackages(testPackages);
 
@@ -105,19 +190,32 @@ namespace TestplanPackageCounter.UglyCode
 
                     luEventPackagesCount -= uePackages.Count;
 
+                    bool lastUePackageRemoved = false;
+
                     if (testBeforeCleanDictionary.ContainsKey(testName.ToUpper())
                         && testBeforeCleanDictionary[testName.ToUpper()])
                     {
                         uePackages.Remove(luEventWithLastUe);
+                        lastUePackageRemoved = true;
                     }
 
-                    packagesCount = luEventPackagesCount + notLuEventPackagesCount;
+                    int packagesCount = luEventPackagesCount + notLuEventPackagesCount;
 
                     int maxUePackagesCount = uePackages.Count;
 
                     platformPackagesCount.Add(testName, packagesCount);
 
                     string ueDictionaryTestName = testName.ToUpper();
+
+                    if (this.PlatformUeDictionary.ContainsKey(platformName))
+                    {
+                        this.PlatformUeDictionary[platformName].Add(testName, (maxUePackagesCount, lastUePackageRemoved));
+                    }
+                    else
+                    {
+                        this.PlatformUeDictionary.Add(platformName, new Dictionary<string, (int, bool)>());
+                        this.PlatformUeDictionary[platformName].Add(testName, (maxUePackagesCount, lastUePackageRemoved));
+                    }
 
                     if (this.MaxUeDictionary.ContainsKey(ueDictionaryTestName))
                     {
@@ -206,7 +304,7 @@ namespace TestplanPackageCounter.UglyCode
         {
             IEnumerable<IHasTimestamp> timeStampEvents =
                         allSubEvents.OfType<IHasTimestamp>().OrderBy(item => item.Timestamp);
-            IEnumerable<UeEvent> ueEvents = allSubEvents.OfType<UeEvent>();
+            IEnumerable<UeEvent> ueEvents = allSubEvents.OfType<UeEvent>().OrderBy(e => e.Timestamp);
 
             if (timeStampEvents.Count() != 0 && ueEvents.Count() != 0)
             {
