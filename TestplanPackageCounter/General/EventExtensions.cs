@@ -8,14 +8,46 @@
 
     public static class EventsExtensionsV1
     {
+        /// <summary>
+        /// Get all subevents of certain type.
+        /// </summary>
+        /// <typeparam name="T">Certain type.</typeparam>
+        /// <param name="luEventList">Set of Lu events.</param>
+        /// <returns>Set of subevents.</returns>
         public static IEnumerable<T> AllSubeventsOfType<T>(
             this IEnumerable<Dictionary<int, LuEvent>> luEventList
+        ) => luEventList.GetAllLevelSubevents().GetAllSubevents().OfType<T>();
+
+        /// <summary>
+        /// Gets the package to which the Lu event belongs.
+        /// </summary>
+        /// <param name="packagesList">List of packages in which to search for an desired Lu event.</param>
+        /// <param name="desiredluEvent">Desired Lu event.</param>
+        /// <returns>Package, containing desired Lu Event.</returns>
+        public static ProxyPackageInfoV1 FindPackageForLuEvent(
+            this List<ProxyPackageInfoV1> packagesList,
+            Dictionary<int, LuEvent> desiredluEvent
         )
         {
-            IEnumerable<T> subEvents = 
-                luEventList.GetAllLevelSubevents().GetAllSubevents().OfType<T>();
-            return subEvents;
+            if (desiredluEvent == null || desiredluEvent.Count() == 0)
+            {
+                return null;
+            }
+
+            foreach (ProxyPackageInfoV1 package in packagesList)
+            {
+                if (package.RequestJson is LuData luData)
+                {
+                    if (luData.LuEvents.Equals(desiredluEvent))
+                    {
+                        return package;
+                    }
+                }
+            }
+
+            return null;
         }
+
         /// <summary>
         /// Finds LuEvent for certain group of level subevents.
         /// </summary>
@@ -131,12 +163,10 @@
         /// <returns>List of subevents.</returns>
         public static IEnumerable<Dictionary<EventType, AbstractSdkEvent[]>> GetAllLevelSubevents(
             this IEnumerable<Dictionary<int, LuEvent>> luEventList
-        )
-        {
-            return from luEvent in luEventList
-                   from luEventContent in luEvent.Values
-                   select luEventContent.Events;
-        }
+        ) => 
+            from luEvent in luEventList
+            from luEventContent in luEvent.Values
+            select luEventContent.Events;
 
         /// <summary>
         /// Gets list of LuEvents from packages.

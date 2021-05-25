@@ -17,7 +17,7 @@
             CounterSettings counterSettings = new CounterSettings(
                 pathToTestplan: @"C:\Users\at\Documents\Backup\testplan.json",
                 outcomingPath: @"C:\Users\at\Documents\Backup\testplan_edited.json",
-                pathToResults: @"C:\Users\at\Downloads\results (7)",
+                pathToResults: @"C:\Users\at\Downloads\results (8)",
                 sdkVersion: SdkVersions.V1,
                 rewriteTestplan: true,
                 ignoreUePackages: true,

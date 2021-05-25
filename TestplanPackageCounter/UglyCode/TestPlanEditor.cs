@@ -74,6 +74,12 @@ namespace TestplanPackageCounter.UglyCode
                 foreach (var test in testSuite.Tests)
                 {
                     string testName = test.Name;
+                    #region debug section
+                    if (testName == "RestartAfterChangeAfterInitAnotherProject")
+                    {
+                        Console.WriteLine();
+                    }
+                    #endregion
                     string fullTestname = string.Concat(testSuiteName, "_", testName).ToUpper();
 
                     if (test.Params == null)
@@ -145,6 +151,8 @@ namespace TestplanPackageCounter.UglyCode
                         }
 
                         #endregion
+
+                        //TODO: if there is no packages for some platform - needs to take packages from platform or from default
 
                         testData.PlatformPackagesCount = new PlatformPackages
                         {

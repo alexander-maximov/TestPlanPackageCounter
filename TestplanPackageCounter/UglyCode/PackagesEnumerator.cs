@@ -18,6 +18,9 @@ namespace TestplanPackageCounter.UglyCode
     {
         private readonly CounterSettings _counterSettings;
 
+        private List<ProxyPackageInfoV1> _previousTestUePackages = new List<ProxyPackageInfoV1>();
+        private List<string> _platformList = new List<string>();
+
         private Dictionary<string, Dictionary<string, List<ProxyPackageInfoV1>>> _allPackagesDeserialized =
             new Dictionary<string, Dictionary<string, List<ProxyPackageInfoV1>>>();
 
@@ -27,27 +30,19 @@ namespace TestplanPackageCounter.UglyCode
         }
 
         internal Dictionary<string, int> MaxUeDictionary { get; set; }
-
         internal Dictionary<string, Dictionary<string, (int, bool)>> PlatformUeDictionary { get; set; }
-
-        internal Dictionary<string, Dictionary<string, int>> PackagesDictionary { get; set; }
-
-        private List<string> _platformList = new List<string>();
+        internal Dictionary<string, Dictionary<string, int>> PackagesDictionary { get; set; }        
 
         internal void Enumerate(Dictionary<string, bool> testBeforeCleanDictionary)
         {
             this.MaxUeDictionary = new Dictionary<string, int>();
             this.PlatformUeDictionary = new Dictionary<string, Dictionary<string, (int, bool)>>();
-
             this._platformList = this.GetPlatformList(this._counterSettings.PathToResults);
-
             //Gets packages content
             this.DeserializeAllPackagesInResults();
-
             //Read in dict
             this.PackagesDictionary =
                 ConvertPackageDictionary(this.EnumeratePackages(testBeforeCleanDictionary));
-
             this.CheckMaxUe();
 
             if (this._counterSettings.WriteToCsv)
@@ -56,6 +51,7 @@ namespace TestplanPackageCounter.UglyCode
             }
         }
 
+        #region MaxUe report section
         private Dictionary<string, Dictionary<string, (int, bool)>> TurnDictionary(
             Dictionary<string, Dictionary<string, (int, bool)>> packagesDictionary
         )
@@ -98,6 +94,7 @@ namespace TestplanPackageCounter.UglyCode
             return turnedDictionary;
         }
 
+
         private void CheckMaxUe()
         {
             Dictionary<string, Dictionary<string, (int, bool)>> turnedPlatformPackages =
@@ -137,6 +134,7 @@ namespace TestplanPackageCounter.UglyCode
 
             File.WriteAllText(filePath, csvContent.ToString());
         }
+        #endregion
 
         /// <summary>
         /// Calculates packages in given result folder.
@@ -151,62 +149,61 @@ namespace TestplanPackageCounter.UglyCode
 
             foreach (var deserializedPlatformPackages in this._allPackagesDeserialized)
             {
-                Dictionary<string, int> platformPackagesCount =
-                    new Dictionary<string, int>();
-
                 string platformName = deserializedPlatformPackages.Key;
 
                 Dictionary<string, List<ProxyPackageInfoV1>> platformPackages =
                     deserializedPlatformPackages.Value;
+                Dictionary<string, int> platformPackagesCount =
+                    new Dictionary<string, int>();
 
                 foreach (var deserializedTestPackages in platformPackages)
                 {
                     string testName = deserializedTestPackages.Key;
 
-                    List<ProxyPackageInfoV1> testPackages = deserializedTestPackages.Value;
+                    #region for debug
+                    string compareString = "PROGRESSIONEVENTSUITE_SWITCHUSER".ToLower();
 
-                    int notLuEventPackagesCount = this.CountNonLuEventPackages(testPackages);
+                    if (testName.ToLower().Contains(compareString))
+                    {
+                        Console.WriteLine();
+                    }
+                    #endregion                    
+
+                    List<ProxyPackageInfoV1> testPackagesOriginal = deserializedTestPackages.Value;
+                    List<ProxyPackageInfoV1> testPackages =
+                        GetTestPackagesWithoutUeDoubles(deserializedTestPackages.Value);                    
 
                     IEnumerable<Dictionary<int, LuEvent>> luEventList = testPackages.GetAllLuEvents();
-                    IEnumerable<Dictionary<EventType, AbstractSdkEvent[]>> levelSubeventsList =
-                        luEventList.GetAllLevelSubevents();
-                    IEnumerable<AbstractSdkEvent> allSubvents = 
-                        levelSubeventsList.GetAllSubevents();
 
-                    UeEvent lastUeEvent = this.GetLastUeEvent(allSubvents);
+                    Dictionary<int, LuEvent> luEventWithLastUe = FindLuEventsWithLastUe(luEventList);
 
-                    Dictionary<EventType, AbstractSdkEvent[]> levelSubeventWithLastUe = 
-                        levelSubeventsList.FindSubeventPackForEvent(lastUeEvent, false);
-                    Dictionary<int, LuEvent> luEventWithLastUe = 
-                        luEventList.FindLuEventForEventsPack(levelSubeventWithLastUe, false);
+                    List<Dictionary<int, LuEvent>> luEventsWithUe =
+                        this.FindPackagesForSubevents(
+                            luEventList.AllSubeventsOfType<UeEvent>(),
+                            luEventList
+                        ).ToList();
+                    
+                    SaveUePackagesToNextTest(testPackagesOriginal);
 
-                    IEnumerable<UeEvent> ueEventsList = 
-                        luEventList.AllSubeventsOfType<UeEvent>();
-
-                    int luEventPackagesCount = luEventList.Count();
-
-                    List<Dictionary<int, LuEvent>> uePackages =
-                        (List<Dictionary<int, LuEvent>>)this.FindPackagesForSubevents(ueEventsList, luEventList);
-
-                    luEventPackagesCount -= uePackages.Count;
+                    platformPackagesCount.Add(
+                        testName,
+                        this.CalculatePackages(testPackages, luEventList, luEventsWithUe)
+                    );
 
                     bool lastUePackageRemoved = false;
 
                     if (testBeforeCleanDictionary.ContainsKey(testName.ToUpper())
                         && testBeforeCleanDictionary[testName.ToUpper()])
                     {
-                        uePackages.Remove(luEventWithLastUe);
+                        luEventsWithUe.Remove(luEventWithLastUe);
+                        #region for doubles Ue report
                         lastUePackageRemoved = true;
+                        #endregion
                     }
 
-                    int packagesCount = luEventPackagesCount + notLuEventPackagesCount;
+                    int maxUePackagesCount = luEventsWithUe.Count;
 
-                    int maxUePackagesCount = uePackages.Count;
-
-                    platformPackagesCount.Add(testName, packagesCount);
-
-                    string ueDictionaryTestName = testName.ToUpper();
-
+                    #region for doubles Ue report
                     if (this.PlatformUeDictionary.ContainsKey(platformName))
                     {
                         this.PlatformUeDictionary[platformName].Add(testName, (maxUePackagesCount, lastUePackageRemoved));
@@ -216,11 +213,14 @@ namespace TestplanPackageCounter.UglyCode
                         this.PlatformUeDictionary.Add(platformName, new Dictionary<string, (int, bool)>());
                         this.PlatformUeDictionary[platformName].Add(testName, (maxUePackagesCount, lastUePackageRemoved));
                     }
+                    #endregion                                        
+
+                    string ueDictionaryTestName = testName.ToUpper();
 
                     if (this.MaxUeDictionary.ContainsKey(ueDictionaryTestName))
                     {
-                        this.MaxUeDictionary[ueDictionaryTestName] = maxUePackagesCount > this.MaxUeDictionary[ueDictionaryTestName] 
-                            ? maxUePackagesCount 
+                        this.MaxUeDictionary[ueDictionaryTestName] = maxUePackagesCount > this.MaxUeDictionary[ueDictionaryTestName]
+                            ? maxUePackagesCount
                             : this.MaxUeDictionary[ueDictionaryTestName];
                     }
                     else
@@ -229,12 +229,105 @@ namespace TestplanPackageCounter.UglyCode
                     }
 
                     //TODO: make this class looks pretty.
+                    //TODO: error with LevelUp_Suite packages count
                 }
 
                 packagesCountDictionary.Add(platformName, platformPackagesCount);
             }
 
             return packagesCountDictionary;
+        }
+
+        private int CalculatePackages(
+            List<ProxyPackageInfoV1> testPackages, 
+            IEnumerable<Dictionary<int, LuEvent>> luEventList, 
+            List<Dictionary<int, LuEvent>> luEventsWithUe
+        )
+        {
+            int luEventPackagesCount = luEventList.Count();
+            luEventPackagesCount -= luEventsWithUe.Count;
+            int notLuEventPackagesCount = this.CountNonLuEventPackages(testPackages);
+            return luEventPackagesCount + notLuEventPackagesCount;
+        }
+
+        private List<ProxyPackageInfoV1> GetTestPackagesWithoutUeDoubles(
+            List<ProxyPackageInfoV1> deserializedTestPackages
+        )
+        {
+            List<ProxyPackageInfoV1> testPackages = deserializedTestPackages;
+
+            UePackageComparer uePackageComparer = new UePackageComparer();
+
+            if (this._previousTestUePackages.Count != 0)
+            {
+                List<ProxyPackageInfoV1> testPackagesToRemove = new List<ProxyPackageInfoV1>();                
+
+                foreach (ProxyPackageInfoV1 testPackage in testPackages)
+                {
+                    if (this._previousTestUePackages.Contains(testPackage, uePackageComparer))
+                    {
+                        testPackagesToRemove.Add(testPackage);
+                    }
+                }
+
+                foreach (var testpackageToRemove in testPackagesToRemove)
+                {
+                    testPackages.Remove(testpackageToRemove);
+                }
+            }            
+
+            testPackages = testPackages.Distinct(uePackageComparer).ToList();
+            this._previousTestUePackages = new List<ProxyPackageInfoV1>();
+
+            return testPackages;
+        }
+
+        /// <summary>
+        /// Gets Lu event containing ue event with highest timestamp value among other subevents.
+        /// </summary>
+        /// <param name="luEventList">List of LuEvents in which to search for an desired value.</param>
+        /// <returns>Lu event with Ue event.</returns>
+        private Dictionary<int, LuEvent> FindLuEventsWithLastUe(IEnumerable<Dictionary<int, LuEvent>> luEventList)
+        {
+            IEnumerable<Dictionary<EventType, AbstractSdkEvent[]>> levelSubeventsList =
+                        luEventList.GetAllLevelSubevents();
+            IEnumerable<AbstractSdkEvent> allSubvents = levelSubeventsList.GetAllSubevents();
+
+            UeEvent lastUeEvent = this.GetLastUeEvent(allSubvents);
+
+            Dictionary<EventType, AbstractSdkEvent[]> levelSubeventWithLastUe =
+                levelSubeventsList.FindSubeventPackForEvent(lastUeEvent, false);
+            Dictionary<int, LuEvent> luEventWithLastUe =
+                luEventList.FindLuEventForEventsPack(levelSubeventWithLastUe, false);
+            return luEventWithLastUe;
+        }
+
+        /// <summary>
+        /// Fills list with ue containing packages to weed out of doubles.
+        /// </summary>
+        /// <param name="testPackages">List of packages in which to search for an ue event packages.</param>
+        /// <param name="luEventsWithUe">Lu events containing ue events.</param>
+        private void SaveUePackagesToNextTest(
+            List<ProxyPackageInfoV1> testPackages            
+        )
+        {
+            IEnumerable<Dictionary<int, LuEvent>> luEventList = testPackages.GetAllLuEvents();
+
+            List<Dictionary<int, LuEvent>> luEventsWithUe =
+                        this.FindPackagesForSubevents(
+                            luEventList.AllSubeventsOfType<UeEvent>(),
+                            luEventList
+                        ).ToList();
+
+            foreach (Dictionary<int, LuEvent> luEventWithUe in luEventsWithUe)
+            {
+                ProxyPackageInfoV1 packageWithUe = testPackages.FindPackageForLuEvent(luEventWithUe);
+
+                if (packageWithUe != null)
+                {
+                    this._previousTestUePackages.Add(packageWithUe);
+                }
+            }
         }
 
         /// <summary>
@@ -280,19 +373,17 @@ namespace TestplanPackageCounter.UglyCode
         /// <returns>Count of non-LuEvent packages.</returns>
         private int CountNonLuEventPackages(IEnumerable<ProxyPackageInfoV1> packagesList)
         {
-            int nonLuEventCount = 0;
+            int LuEventCount = 0;
 
             foreach (var package in packagesList)
             {
-                if (package.RequestJson is LuData luData)
+                if (package.RequestJson is LuData)
                 {
-                    continue;
-                }
-
-                nonLuEventCount++;
+                    LuEventCount++;
+                }                
             }
 
-            return nonLuEventCount;
+            return packagesList.Count() - LuEventCount;
         }
 
         /// <summary>
@@ -377,11 +468,14 @@ namespace TestplanPackageCounter.UglyCode
             }
         }
 
+        /// <summary>
+        /// Generate csv report.
+        /// </summary>
         private void WriteToCsv()
         {
             StringBuilder csvContent = new StringBuilder();
 
-            GenerateTitleLine(this._counterSettings.PathToResults, csvContent);
+            GenerateTitleLine(csvContent);
             GenerateRestContent(csvContent, this.PackagesDictionary);
 
             string filePath = Path.Combine(this._counterSettings.PathToResults, "packagesCountNew.csv");
@@ -389,6 +483,11 @@ namespace TestplanPackageCounter.UglyCode
             File.WriteAllText(filePath, csvContent.ToString());
         }
 
+        /// <summary>
+        /// Fill csv with values.
+        /// </summary>
+        /// <param name="csvContent">Csv contetn builder to fill.</param>
+        /// <param name="convertedDictionary">Set of platforms and tests with packages counting.</param>
         private static void GenerateRestContent(
             StringBuilder csvContent, 
             Dictionary<string, Dictionary<string, int>> convertedDictionary
@@ -410,7 +509,11 @@ namespace TestplanPackageCounter.UglyCode
             }            
         }
 
-        private void GenerateTitleLine(string resultsPath, StringBuilder csvContent)
+        /// <summary>
+        /// Adds title line to csv.
+        /// </summary>        
+        /// <param name="csvContent">Csv contetn builder to fill.</param>
+        private void GenerateTitleLine(StringBuilder csvContent)
         {
             string titleLine;
 
@@ -425,7 +528,7 @@ namespace TestplanPackageCounter.UglyCode
                 titleLine = "All packages counted";
             }
 
-            foreach (string directory in Directory.GetDirectories(resultsPath))
+            foreach (string directory in this._platformList)
             {
                 titleLine += $",{Path.GetFileName(directory)}";
             }
@@ -482,6 +585,11 @@ namespace TestplanPackageCounter.UglyCode
             return convertedDictionary;
         }
 
+        /// <summary>
+        /// Get list of platforms from results.
+        /// </summary>
+        /// <param name="resultsPath">Path to results to generate list of platforms based on folder names.</param>
+        /// <returns>List of platforms.</returns>
         private List<string> GetPlatformList(string resultsPath)
         {
             List<string> platformList = new List<string>();
