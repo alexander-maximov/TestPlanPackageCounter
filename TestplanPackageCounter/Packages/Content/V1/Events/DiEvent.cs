@@ -3,6 +3,7 @@
     using Newtonsoft.Json;
     using System.ComponentModel;
     using TestplanPackageCounter.General;
+    using TestplanPackageCounter.Packages.Content.General;
 
     public class DiEvent : AbstractSdkEvent, IHasTimestamp
     {
@@ -58,16 +59,6 @@
         [DefaultValue(Constants.NotExistsString)]
         public string AdvertisingId { get; private set; }
 
-        /*
-         * TODO: remove me
-        [JsonProperty("serialId")]
-        [DefaultValue(Constants.NotExistsString)]
-        [AvailablePlatform(ExecEnvirEnum.Android, ExecEnvirEnum.Windows)]
-        //https://devtodev.slack.com/archives/CD92X8NLU/p1610370847006500
-        [Obsolete]
-        public string SerialId { get; private set; }
-        */
-
         [JsonProperty("timeZoneOffset")]
         [JsonRequired]
         public int TimeZoneOffset { get; private set; }
@@ -82,7 +73,7 @@
 
         [JsonProperty("timestamp")]
         [JsonRequired]
-        public ulong Timestamp { get; private set; }
+        public ulong? Timestamp { get; private set; }
 
         [JsonProperty("isLimitAdTrackingEnabled")]
         [DefaultValue(null)]

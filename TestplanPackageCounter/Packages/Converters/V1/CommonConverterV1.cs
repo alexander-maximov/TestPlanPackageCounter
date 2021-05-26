@@ -5,8 +5,9 @@
     using TestplanPackageCounter.Packages.Content.V1.Events;
     using TestplanPackageCounter.Packages.Content.V1.Events.Entries;
     using TestplanPackageCounter.Packages.Content.V1.Events.UpperLevelEvents;
+    using TestplanPackageCounter.Packages.Converters.General;
 
-    public class CommonConverter : EntryConverter
+    public class CommonConverterV1 : EntryConverter
     {
         public override bool CanConvert(Type objectType) =>
             this._availableTypes.Contains(objectType);

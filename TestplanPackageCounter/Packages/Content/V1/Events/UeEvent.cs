@@ -1,12 +1,13 @@
 ﻿namespace TestplanPackageCounter.Packages.Content.V1.Events
 {
     using Newtonsoft.Json;
+    using TestplanPackageCounter.Packages.Content.General;
 
     public class UeEvent : AbstractSdkEvent, IHasTimestamp
     {
         [JsonProperty("timestamp")]
         [JsonRequired]
-        public ulong Timestamp { get; private set; }
+        public ulong? Timestamp { get; private set; }
 
         [JsonProperty("length")]
         [JsonRequired]

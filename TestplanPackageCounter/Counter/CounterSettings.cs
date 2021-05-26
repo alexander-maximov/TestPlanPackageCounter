@@ -24,6 +24,8 @@
 
         internal SdkVersions SdkVersion { get; }
 
+        internal bool SortOnly { get; }
+
         public CounterSettings(
             string pathToTestplan,
             string outcomingPath,
@@ -34,7 +36,8 @@
             bool ignoreLastUe,
             bool calculateWithMaxUe,
             bool fillWithDefaultParams,
-            bool writeToCsv
+            bool writeToCsv,
+            bool sortOnly
         )
         {
             this.PathToTestplan = pathToTestplan;
@@ -47,6 +50,7 @@
             this.CalculatePackagesWithMaxUe = calculateWithMaxUe;
             this.FillWithDefaultParams = fillWithDefaultParams;
             this.WriteToCsv = writeToCsv;
+            this.SortOnly = sortOnly;
         }
     }
 }

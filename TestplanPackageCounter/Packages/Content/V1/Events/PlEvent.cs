@@ -2,12 +2,13 @@
 {
     using System.ComponentModel;
     using Newtonsoft.Json;
+    using TestplanPackageCounter.Packages.Content.General;
 
     public class PlEvent : AbstractSdkEvent, IHasTimestamp
     {
         [JsonProperty("timestamp")]
         [JsonRequired]
-        public ulong Timestamp { get; private set; }
+        public ulong? Timestamp { get; private set; }
 
         [JsonProperty("sessionId")]
         [DefaultValue(null)]

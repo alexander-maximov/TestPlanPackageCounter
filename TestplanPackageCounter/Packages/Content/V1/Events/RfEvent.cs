@@ -4,12 +4,13 @@
 
     using System.ComponentModel;
     using TestplanPackageCounter.General;
+    using TestplanPackageCounter.Packages.Content.General;
 
     public class RfEvent : AbstractSdkEvent, IHasTimestamp
     {
         [JsonProperty("timestamp")]
         [JsonRequired]
-        public ulong Timestamp { get; private set; }
+        public ulong? Timestamp { get; private set; }
 
         [JsonProperty("publisher")]
         [DefaultValue(Constants.NotExistsString)]

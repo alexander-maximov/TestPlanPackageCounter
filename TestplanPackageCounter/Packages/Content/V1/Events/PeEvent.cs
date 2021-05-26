@@ -6,12 +6,13 @@
     using System.Collections.Generic;
     using System.ComponentModel;
     using System.Runtime.Serialization;
+    using TestplanPackageCounter.Packages.Content.General;
 
     public class PeEvent : AbstractSdkEvent, IHasTimestamp
     {
         [JsonProperty("timestamp")]
         [JsonRequired]
-        public ulong Timestamp { get; private set; }
+        public ulong? Timestamp { get; private set; }
 
         [JsonProperty("id")]
         [JsonRequired]

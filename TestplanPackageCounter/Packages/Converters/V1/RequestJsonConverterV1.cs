@@ -5,7 +5,7 @@
     using Newtonsoft.Json.Linq;
     using TestplanPackageCounter.Packages.Content.V1.Events.UpperLevelEvents;
 
-    public class RequestJsonConverter : JsonConverter
+    public class RequestJsonConverterV1 : JsonConverter
     {
         private readonly Type _requestJsonType = typeof(RequestJsonContainerV1);
         private readonly Type _sdkVersionType = typeof(SdkVersionData);

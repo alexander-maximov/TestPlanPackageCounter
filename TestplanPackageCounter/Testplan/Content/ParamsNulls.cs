@@ -38,8 +38,8 @@ namespace TestplanPackageCounter.Testplan.Content
         public string ReverseAdvertisment { get; private set; }        
 
         [JsonProperty("DefaultPackagesCount", Order = 8)]
-        [JsonRequired]
-        public int DefaultPackagesCount { get; set; }
+        [DefaultValue(null)]
+        public int? DefaultPackagesCount { get; set; }
 
         [JsonProperty("PlatformPackagesCount", Order = 9)]
         [DefaultValue(null)]

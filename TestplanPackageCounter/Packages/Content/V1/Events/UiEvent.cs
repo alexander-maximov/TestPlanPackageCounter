@@ -3,12 +3,13 @@
     using Newtonsoft.Json;
     using System.ComponentModel;
     using TestplanPackageCounter.General;
+    using TestplanPackageCounter.Packages.Content.General;
 
     public class UiEvent : AbstractSdkEvent, IHasTimestamp
     {
         [JsonProperty("timestamp")]
         [JsonRequired]
-        public ulong Timestamp { get; private set; }
+        public ulong? Timestamp { get; private set; }
 
         [JsonProperty("locale")]
         [JsonRequired]

@@ -17,17 +17,17 @@
             CounterSettings counterSettings = new CounterSettings(
                 pathToTestplan: @"C:\Users\at\Documents\Backup\testplan.json",
                 outcomingPath: @"C:\Users\at\Documents\Backup\testplan_edited.json",
-                pathToResults: @"C:\Users\at\Downloads\results (8)",
-                sdkVersion: SdkVersions.V1,
+                pathToResults: @"C:\Users\at\Downloads\results_jenkins-Autotests-Android-v2-FunctionalTests-TestingDaemon-97",
+                sdkVersion: SdkVersions.V2,
                 rewriteTestplan: true,
                 ignoreUePackages: true,
                 ignoreLastUe: true,
                 calculateWithMaxUe: true,
                 fillWithDefaultParams: false,
-                writeToCsv: true
+                writeToCsv: true,
+                sortOnly: false
             );
 
-            #region get testplan data.
             JsonSerializerSettings serializerSettings = new JsonSerializerSettings
             {
                 DefaultValueHandling = DefaultValueHandling.Populate,
@@ -43,9 +43,17 @@
             List<TestSuite> testSuites =
                     JsonConvert.DeserializeObject<List<TestSuite>>(testplanContent, serializerSettings);
 
-            //Fill that dictionary!
+            if (counterSettings.SortOnly)
+            {
+                string serializedJson =
+                    JsonConvert.SerializeObject(testSuites, Formatting.Indented, serializerSettings);
+
+                File.WriteAllText(counterSettings.OutcomingPath, serializedJson);
+
+                return;
+            }
+            
             Dictionary<string, bool> testBeforeCleanDictionary = GetToKnowCleaningTest(testSuites);
-            #endregion
 
             PackagesEnumerator packagesEnumerator = new PackagesEnumerator(counterSettings);
             packagesEnumerator.Enumerate(testBeforeCleanDictionary);
@@ -54,27 +62,26 @@
                 packagesEnumerator.PackagesDictionary;
 
             if (counterSettings.RewriteTestplan)
-            {               
+            {
                 TestPlanEditor testSuiteEditor = new TestPlanEditor(
-                    testSuites,
-                    packagesDictionary,
-                    packagesEnumerator.MaxUeDictionary
-                );
-                testSuiteEditor.EditTestSuites();
+                        testSuites,
+                        packagesDictionary,
+                        packagesEnumerator.MaxUeDictionary
+                    );
+                testSuiteEditor.EditTestPlan();
 
                 string serializedJson =
                     JsonConvert.SerializeObject(testSuites, Formatting.Indented, serializerSettings);
 
                 File.WriteAllText(counterSettings.OutcomingPath, serializedJson);
             }
-
-            //TODO: count without Al
-            //TODO: determine by name what is android, what is IOS etc.
         }
 
         private static Dictionary<string, bool> GetToKnowCleaningTest(List<TestSuite> testSuites)
         {
             Dictionary<string, bool> previousTestIsCleanDictionary = new Dictionary<string, bool>();
+
+            bool aliveSuitePlug = true;
 
             string previousTestSuiteName = string.Empty;
             string previousTestName = string.Empty;
@@ -114,6 +121,11 @@
             string finalTestEntryName = string.Concat(previousTestSuiteName, "_", previousTestName);
 
             previousTestIsCleanDictionary.Add(finalTestEntryName, false);
+
+            if (aliveSuitePlug)
+            {
+                previousTestIsCleanDictionary["ALIVESUITE_ALIVEWITHTIMEOUT"] = aliveSuitePlug;
+            }
 
             return previousTestIsCleanDictionary;
         }

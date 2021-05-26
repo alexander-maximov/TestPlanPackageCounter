@@ -63,7 +63,7 @@ namespace TestplanPackageCounter.UglyCode
             return maxCount;
         }
 
-        internal void EditTestSuites()
+        internal void EditTestPlan()
         {
             this.EditedTestSuites = new List<TestSuite>();
 
@@ -75,7 +75,8 @@ namespace TestplanPackageCounter.UglyCode
                 {
                     string testName = test.Name;
                     #region debug section
-                    if (testName == "RestartAfterChangeAfterInitAnotherProject")
+                    //TODO: remove me
+                    if (testName.ToUpper() == "TWOLOCATIONWITHOUTANOTHEREVENTSBEFOREINIT")
                     {
                         Console.WriteLine();
                     }
@@ -89,7 +90,7 @@ namespace TestplanPackageCounter.UglyCode
 
                     ParamsNulls testData = (ParamsNulls)test.Params;
 
-                    int defaultPackagesCount = testData.DefaultPackagesCount;
+                    int? defaultPackagesCount = testData.DefaultPackagesCount;
                     int maxUeCount = this._maxUeDictionary.ContainsKey(fullTestname)
                         ? this._maxUeDictionary[fullTestname]
                         : 0;
@@ -111,14 +112,6 @@ namespace TestplanPackageCounter.UglyCode
                     {
                         PlatformPackagesCount platformPackages = new PlatformPackagesCount
                         {
-                            //TODO: under function
-                            /*
-                            AndroidPackages = this._packagesDictionary[fullTestname]["TestResults_API29"],                           
-                            IosPackages = this._packagesDictionary[fullTestname]["TestResults_iOS_5S_12"],
-                            MacOsPackages = this._packagesDictionary[fullTestname]["TestResults_MacOs"],
-                            UwpPackages = this._packagesDictionary[fullTestname]["TestResults_uwpx64_NET_XAML"],
-                            WindowsPackages = this._packagesDictionary[fullTestname]["TestResults_winx86_64_IL2CPP"]
-                            */
                             AndroidPackages = this.GetPackagesCountByPlatform(this._packagesDictionary[fullTestname], Platforms.Android, maxUeCount),
                             IosPackages = this.GetPackagesCountByPlatform(this._packagesDictionary[fullTestname], Platforms.IOS, maxUeCount),
                             MacOsPackages = this.GetPackagesCountByPlatform(this._packagesDictionary[fullTestname], Platforms.MacOS, maxUeCount),

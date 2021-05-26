@@ -12,6 +12,21 @@
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -56,12 +71,56 @@
     <Compile Include="General\Constants.cs" />
     <Compile Include="General\EscapedStringResolver.cs" />
     <Compile Include="General\EventExtensions.cs" />
-    <Compile Include="Packages\Content\V1\Events\IHasTimestamp.cs" />
-    <Compile Include="Packages\Converters\EntryConverter.cs" />
-    <Compile Include="Packages\Converters\V1\CommonConverter.cs" />
+    <Compile Include="Packages\Content\General\IHasTimestamp.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\AnalyticsRequest.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\AbstractSdkEventV2.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\AlV2.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\CaV2.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\CeV2.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\DiV2.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\Entries\IeEntry.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\Entries\PeEntry.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\IHasBasicValues.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\IHasCodeValue.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\LuV2.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\PeV2.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\PlV2.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\RfV2.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\RpV2.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\ScV2.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\SpV2.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\SsV2.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\TrV2.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\TsV2.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\UeV2.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\VpV2.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\PackagesData.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\ReportsData.cs" />
+    <Compile Include="Packages\Content\V2\Anticheat\AnticheatRequest.cs" />
+    <Compile Include="Packages\Content\V2\Anticheat\AnticheatResponse.cs" />
+    <Compile Include="Packages\Content\V2\Anticheat\ReceiptCommon.cs" />
+    <Compile Include="Packages\Content\V2\Anticheat\ReceiptContainer.cs" />
+    <Compile Include="Packages\Content\V2\Anticheat\ReceiptIOS.cs" />
+    <Compile Include="Packages\Content\V2\EventTypeV2.cs" />
+    <Compile Include="Packages\Content\V2\ProxyPackageInfoV2.cs" />
+    <Compile Include="Packages\Content\V2\RequestJsonContainerV2.cs" />
+    <Compile Include="Packages\Content\V2\ResponseJsonContainerV2.cs" />
+    <Compile Include="Packages\Content\V2\SdkVersion\ExcludedEvents.cs" />
+    <Compile Include="Packages\Content\V2\SdkVersion\ExcludeEntry.cs" />
+    <Compile Include="Packages\Content\V2\SdkVersion\SdkVersionRequest.cs" />
+    <Compile Include="Packages\Content\V2\SdkVersion\SdkVersionResponse.cs" />
+    <Compile Include="Packages\Content\V2\UserIdentification\DevtodevIdResponse.cs" />
+    <Compile Include="Packages\Content\V2\UserIdentification\RetryAfterResponse.cs" />
+    <Compile Include="Packages\Content\V2\UserIdentification\UserIdentificationRequest.cs" />
+    <Compile Include="Packages\Converters\General\EntryConverter.cs" />
+    <Compile Include="Packages\Converters\V1\CommonConverterV1.cs" />
     <Compile Include="Packages\Converters\V1\EventsArrayConverter.cs" />
     <Compile Include="Packages\Converters\V1\LuDataConverter.cs" />
-    <Compile Include="Packages\Converters\V1\RequestJsonConverter.cs" />
+    <Compile Include="Packages\Converters\V1\RequestJsonConverterV1.cs" />
+    <Compile Include="Packages\Converters\V2\CommonConverterV2.cs" />
+    <Compile Include="Packages\Converters\V2\EventConverter.cs" />
+    <Compile Include="Packages\Converters\V2\RequestJsonConverterV2.cs" />
+    <Compile Include="Packages\Converters\V2\ResponseJsonConverter.cs" />
     <Compile Include="Testplan\Converters\ParamsConverter.cs" />
     <Compile Include="Counter\CounterSettings.cs" />
     <Compile Include="Packages\Content\General\ProxyPackageInfo.cs" />
@@ -113,10 +172,18 @@
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
-    <Folder Include="Packages\Content\V2\" />
-    <Folder Include="Packages\Converters\General\" />
-    <Folder Include="Packages\Converters\V2\" />
+    <BootstrapperPackage Include=".NETFramework,Version=v4.8">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.8 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

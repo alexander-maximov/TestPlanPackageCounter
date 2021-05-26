@@ -7,10 +7,13 @@ using System.Linq;
 using System.Text;
 using TestplanPackageCounter.Counter;
 using TestplanPackageCounter.General;
+using TestplanPackageCounter.Packages.Content.General;
 using TestplanPackageCounter.Packages.Content.V1;
 using TestplanPackageCounter.Packages.Content.V1.Events;
 using TestplanPackageCounter.Packages.Content.V1.Events.UpperLevelEvents;
+using TestplanPackageCounter.Packages.Content.V2;
 using TestplanPackageCounter.Packages.Converters.V1;
+using TestplanPackageCounter.Packages.Converters.V2;
 
 namespace TestplanPackageCounter.UglyCode
 {
@@ -33,6 +36,7 @@ namespace TestplanPackageCounter.UglyCode
         internal Dictionary<string, Dictionary<string, (int, bool)>> PlatformUeDictionary { get; set; }
         internal Dictionary<string, Dictionary<string, int>> PackagesDictionary { get; set; }        
 
+        //TODO: this function looks like all in one function. Separate functionality.
         internal void Enumerate(Dictionary<string, bool> testBeforeCleanDictionary)
         {
             this.MaxUeDictionary = new Dictionary<string, int>();
@@ -161,7 +165,8 @@ namespace TestplanPackageCounter.UglyCode
                     string testName = deserializedTestPackages.Key;
 
                     #region for debug
-                    string compareString = "PROGRESSIONEVENTSUITE_SWITCHUSER".ToLower();
+                    //TODO: remove me
+                    string compareString = "PROGRESSIONEVENTSUITE_TWOLOCATIONWITHOUTANOTHEREVENTSBEFOREINIT".ToLower();
 
                     if (testName.ToLower().Contains(compareString))
                     {
@@ -227,9 +232,6 @@ namespace TestplanPackageCounter.UglyCode
                     {
                         this.MaxUeDictionary.Add(ueDictionaryTestName, maxUePackagesCount);
                     }
-
-                    //TODO: make this class looks pretty.
-                    //TODO: error with LevelUp_Suite packages count
                 }
 
                 packagesCountDictionary.Add(platformName, platformPackagesCount);
@@ -429,10 +431,20 @@ namespace TestplanPackageCounter.UglyCode
                 Culture = CultureInfo.InvariantCulture
             };
 
-            packageSerializationSettings.Converters.Add(new RequestJsonConverter());
-            packageSerializationSettings.Converters.Add(new CommonConverter());
-            packageSerializationSettings.Converters.Add(new EventsArrayConverter());
-            packageSerializationSettings.Converters.Add(new LuDataConverter());
+            if (this._counterSettings.SdkVersion == SdkVersions.V1)
+            {
+                packageSerializationSettings.Converters.Add(new RequestJsonConverterV1());
+                packageSerializationSettings.Converters.Add(new CommonConverterV1());
+                packageSerializationSettings.Converters.Add(new EventsArrayConverter());
+                packageSerializationSettings.Converters.Add(new LuDataConverter());
+            }
+            else
+            {
+                packageSerializationSettings.Converters.Add(new CommonConverterV2());
+                packageSerializationSettings.Converters.Add(new EventConverter());
+                packageSerializationSettings.Converters.Add(new RequestJsonConverterV2());
+                packageSerializationSettings.Converters.Add(new ResponseJsonConverter());
+            }
 
             foreach (string directory in Directory.GetDirectories(this._counterSettings.PathToResults))
             {
@@ -451,12 +463,22 @@ namespace TestplanPackageCounter.UglyCode
                     {
                         string packageContent = File.ReadAllText(jsonFile, Encoding.UTF8);
 
-                        ProxyPackageInfoV1 desetializedJson = JsonConvert.DeserializeObject<ProxyPackageInfoV1>(
-                            packageContent, 
-                            packageSerializationSettings
-                        );
+                        if (this._counterSettings.SdkVersion == SdkVersions.V1)
+                        {
+                            ProxyPackageInfoV1 deserializedJsonV1 = JsonConvert.DeserializeObject<ProxyPackageInfoV1>(
+                                packageContent,
+                                packageSerializationSettings
+                            );
 
-                        packagesList.Add(desetializedJson);
+                            packagesList.Add(deserializedJsonV1);
+                        }
+                        else
+                        {
+                            ProxyPackageInfoV2 deserializedJsonV2 = JsonConvert.DeserializeObject<ProxyPackageInfoV2>(
+                                packageContent,
+                                packageSerializationSettings
+                            );
+                        }
                     }
 
                     string testName = Path.GetFileName(subDirectory);

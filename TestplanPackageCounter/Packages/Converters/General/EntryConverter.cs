@@ -1,4 +1,4 @@
-﻿namespace TestplanPackageCounter.Packages.Converters
+﻿namespace TestplanPackageCounter.Packages.Converters.General
 {
     using System.Linq;
 
