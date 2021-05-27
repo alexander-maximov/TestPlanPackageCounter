@@ -1,10 +1,12 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Web;
 using TestplanPackageCounter.Counter;
 using TestplanPackageCounter.General;
 using TestplanPackageCounter.Packages.Content.General;
@@ -24,34 +26,128 @@ namespace TestplanPackageCounter.UglyCode
         private List<ProxyPackageInfoV1> _previousTestUePackages = new List<ProxyPackageInfoV1>();
         private List<string> _platformList = new List<string>();
 
-        private Dictionary<string, Dictionary<string, List<ProxyPackageInfoV1>>> _allPackagesDeserialized =
+        private Dictionary<string, Dictionary<string, List<ProxyPackageInfoV1>>> _deserializedPackagesV1 =
             new Dictionary<string, Dictionary<string, List<ProxyPackageInfoV1>>>();
+        private Dictionary<string, Dictionary<string, List<ProxyPackageInfoV2>>> _deserializedPackagesV2 =
+            new Dictionary<string, Dictionary<string, List<ProxyPackageInfoV2>>>();
+
+        internal Dictionary<string, int> MaxUeDictionary { get; set; }
+        internal Dictionary<string, Dictionary<string, (int, bool)>> PlatformUeDictionary { get; set; }
+        internal Dictionary<string, Dictionary<string, int>> PackagesDictionary { get; set; }
 
         internal PackagesEnumerator(CounterSettings counterSettings)
         {
             this._counterSettings = counterSettings;
+            this.MaxUeDictionary = new Dictionary<string, int>();
+            this.PlatformUeDictionary = new Dictionary<string, Dictionary<string, (int, bool)>>();
+            this._platformList = this.GetPlatformList(this._counterSettings.PathToResults);
         }
-
-        internal Dictionary<string, int> MaxUeDictionary { get; set; }
-        internal Dictionary<string, Dictionary<string, (int, bool)>> PlatformUeDictionary { get; set; }
-        internal Dictionary<string, Dictionary<string, int>> PackagesDictionary { get; set; }        
 
         //TODO: this function looks like all in one function. Separate functionality.
         internal void Enumerate(Dictionary<string, bool> testBeforeCleanDictionary)
         {
-            this.MaxUeDictionary = new Dictionary<string, int>();
-            this.PlatformUeDictionary = new Dictionary<string, Dictionary<string, (int, bool)>>();
-            this._platformList = this.GetPlatformList(this._counterSettings.PathToResults);
-            //Gets packages content
-            this.DeserializeAllPackagesInResults();
-            //Read in dict
-            this.PackagesDictionary =
-                ConvertPackageDictionary(this.EnumeratePackages(testBeforeCleanDictionary));
-            this.CheckMaxUe();
+            Dictionary<string, Dictionary<string, int>> packagesDictionary =
+                new Dictionary<string, Dictionary<string, int>>();
 
-            if (this._counterSettings.WriteToCsv)
+            if (this._counterSettings.SdkVersion == SdkVersions.V1)
             {
-                WriteToCsv();
+                this.DeserializeAllPackagesV1();
+                packagesDictionary = this.EnumeratePackagesV1(testBeforeCleanDictionary);
+            }
+            else
+            {
+                this.DeserializeAllPackagesV2();
+                packagesDictionary = this.EnumeratePackagesV2(testBeforeCleanDictionary);
+            }
+
+            this.PackagesDictionary =
+                    ConvertPackageDictionary(packagesDictionary);
+        }
+
+        private Dictionary<string, Dictionary<string, int>> EnumeratePackagesV2(
+            Dictionary<string, bool> testBeforeCleanDictionary = null
+        )
+        {
+            Dictionary<string, Dictionary<string, int>> packagesCountDictionary =
+                new Dictionary<string, Dictionary<string, int>>();
+
+            foreach (var deserializedPlatformPackages in this._deserializedPackagesV2)
+            {
+                string platformName = deserializedPlatformPackages.Key;
+
+                Dictionary<string, List<ProxyPackageInfoV2>> platformPackages =
+                    deserializedPlatformPackages.Value;
+                Dictionary<string, int> platformPackagesCount =
+                    new Dictionary<string, int>();
+
+                foreach (var deserializedTestPackages in platformPackages)
+                {
+                    string testName = deserializedTestPackages.Key;
+
+                    List<ProxyPackageInfoV2> testPackages = deserializedTestPackages.Value;
+
+                    platformPackagesCount.Add(
+                        testName,
+                        testPackages.Count
+                    );
+                }
+
+                packagesCountDictionary.Add(platformName, platformPackagesCount);
+            }
+
+            return packagesCountDictionary;
+        }
+
+        private void DeserializeAllPackagesV2()
+        {
+            JsonSerializerSettings packageSerializationSettings = new JsonSerializerSettings
+            {
+                CheckAdditionalContent = true,
+                MissingMemberHandling = MissingMemberHandling.Error,
+                ReferenceLoopHandling = ReferenceLoopHandling.Error,
+                DefaultValueHandling = DefaultValueHandling.Populate,
+                ContractResolver = new EscapedStringResolver(),
+                FloatFormatHandling = FloatFormatHandling.String,
+                FloatParseHandling = FloatParseHandling.Double,
+                Culture = CultureInfo.InvariantCulture
+            };
+
+            packageSerializationSettings.Converters.Add(new CommonConverterV2());
+            packageSerializationSettings.Converters.Add(new EventConverter());
+            packageSerializationSettings.Converters.Add(new RequestJsonConverterV2());
+            packageSerializationSettings.Converters.Add(new ResponseJsonConverter());
+
+            foreach (string directory in Directory.GetDirectories(this._counterSettings.PathToResults))
+            {
+                string platformName = Path.GetFileName(directory);
+
+                Dictionary<string, List<ProxyPackageInfoV2>> platformPackagesDictionary =
+                    new Dictionary<string, List<ProxyPackageInfoV2>>();
+
+                foreach (string subDirectory in Directory.GetDirectories(directory))
+                {
+                    List<ProxyPackageInfoV2> packagesList = new List<ProxyPackageInfoV2>();
+
+                    IEnumerable<string> jsonFiles = Directory.GetFiles(subDirectory, "*.json");
+
+                    foreach (string jsonFile in jsonFiles)
+                    {
+                        string packageContent = File.ReadAllText(jsonFile, Encoding.UTF8);
+
+                        ProxyPackageInfoV2 deserializedJsonV1 = JsonConvert.DeserializeObject<ProxyPackageInfoV2>(
+                                packageContent,
+                                packageSerializationSettings
+                            );
+
+                        packagesList.Add(deserializedJsonV1);
+                    }
+
+                    string testName = Path.GetFileName(subDirectory);
+
+                    platformPackagesDictionary.Add(testName, packagesList);
+                }
+
+                this._deserializedPackagesV2.Add(platformName, platformPackagesDictionary);
             }
         }
 
@@ -99,7 +195,7 @@ namespace TestplanPackageCounter.UglyCode
         }
 
 
-        private void CheckMaxUe()
+        internal void CheckMaxUe()
         {
             Dictionary<string, Dictionary<string, (int, bool)>> turnedPlatformPackages =
                 this.TurnDictionary(this.PlatformUeDictionary);
@@ -144,14 +240,14 @@ namespace TestplanPackageCounter.UglyCode
         /// Calculates packages in given result folder.
         /// </summary>
         /// <returns>Platform separated dictionary of dictionary of test and packages.</returns>
-        private Dictionary<string, Dictionary<string, int>> EnumeratePackages(
-            Dictionary<string, bool> testBeforeCleanDictionary
+        private Dictionary<string, Dictionary<string, int>> EnumeratePackagesV1(
+            Dictionary<string, bool> testBeforeCleanDictionary = null
         )
         {
             Dictionary<string, Dictionary<string, int>> packagesCountDictionary =
                 new Dictionary<string, Dictionary<string, int>>();
 
-            foreach (var deserializedPlatformPackages in this._allPackagesDeserialized)
+            foreach (var deserializedPlatformPackages in this._deserializedPackagesV1)
             {
                 string platformName = deserializedPlatformPackages.Key;
 
@@ -166,17 +262,36 @@ namespace TestplanPackageCounter.UglyCode
 
                     #region for debug
                     //TODO: remove me
-                    string compareString = "PROGRESSIONEVENTSUITE_TWOLOCATIONWITHOUTANOTHEREVENTSBEFOREINIT".ToLower();
+                    string compareString = "StartAfterSwitchBeforeInit".ToLower();
 
                     if (testName.ToLower().Contains(compareString))
                     {
-                        Console.WriteLine();
+                        Console.Write("");
                     }
                     #endregion                    
 
-                    List<ProxyPackageInfoV1> testPackagesOriginal = deserializedTestPackages.Value;
+                    List<ProxyPackageInfoV1> testPackagesOriginal = 
+                        new List<ProxyPackageInfoV1> (deserializedTestPackages.Value);
                     List<ProxyPackageInfoV1> testPackages =
-                        GetTestPackagesWithoutUeDoubles(deserializedTestPackages.Value);                    
+                        GetTestPackagesWithoutUeDoubles(deserializedTestPackages.Value);
+
+                    bool showTestName = false;
+
+                    if (testPackagesOriginal.Count != testPackages.Count)
+                    {
+                        var excludedPackages = testPackagesOriginal.Except(testPackages);
+
+                        Console.WriteLine($"{platformName} {testName}");
+                        showTestName = true;
+
+                        foreach (var excludedPackage in excludedPackages)
+                        {
+                            NameValueCollection paramsUrl =
+                                HttpUtility.ParseQueryString(new UriBuilder(excludedPackage.RequestUrl).Query);
+
+                            Console.WriteLine($"Double package signature: s={paramsUrl["s"]}");
+                        }
+                    }
 
                     IEnumerable<Dictionary<int, LuEvent>> luEventList = testPackages.GetAllLuEvents();
 
@@ -188,7 +303,7 @@ namespace TestplanPackageCounter.UglyCode
                             luEventList
                         ).ToList();
                     
-                    SaveUePackagesToNextTest(testPackagesOriginal);
+                    this._previousTestUePackages = new List<ProxyPackageInfoV1> (testPackagesOriginal);
 
                     platformPackagesCount.Add(
                         testName,
@@ -197,10 +312,20 @@ namespace TestplanPackageCounter.UglyCode
 
                     bool lastUePackageRemoved = false;
 
-                    if (testBeforeCleanDictionary.ContainsKey(testName.ToUpper())
-                        && testBeforeCleanDictionary[testName.ToUpper()])
+                    if (testBeforeCleanDictionary != null 
+                        && testBeforeCleanDictionary.ContainsKey(testName.ToUpper())
+                        && testBeforeCleanDictionary[testName.ToUpper()]
+                    )
                     {
                         luEventsWithUe.Remove(luEventWithLastUe);
+
+                        if (!showTestName)
+                        {
+                            Console.WriteLine($"{platformName} {testName}");
+                            showTestName = true;
+                        }
+
+                        Console.WriteLine("Last Ue dropped.");
                         #region for doubles Ue report
                         lastUePackageRemoved = true;
                         #endregion
@@ -231,6 +356,11 @@ namespace TestplanPackageCounter.UglyCode
                     else
                     {
                         this.MaxUeDictionary.Add(ueDictionaryTestName, maxUePackagesCount);
+                    }
+
+                    if (showTestName)
+                    {
+                        Console.WriteLine("---------------------------------------------------");
                     }
                 }
 
@@ -276,7 +406,7 @@ namespace TestplanPackageCounter.UglyCode
                 {
                     testPackages.Remove(testpackageToRemove);
                 }
-            }            
+            }
 
             testPackages = testPackages.Distinct(uePackageComparer).ToList();
             this._previousTestUePackages = new List<ProxyPackageInfoV1>();
@@ -304,6 +434,7 @@ namespace TestplanPackageCounter.UglyCode
             return luEventWithLastUe;
         }
 
+        #region unused
         /// <summary>
         /// Fills list with ue containing packages to weed out of doubles.
         /// </summary>
@@ -331,6 +462,7 @@ namespace TestplanPackageCounter.UglyCode
                 }
             }
         }
+        #endregion
 
         /// <summary>
         /// Finds packages list for list of subevents taken.
@@ -417,7 +549,7 @@ namespace TestplanPackageCounter.UglyCode
         /// <summary>
         /// Deserialize all result packages and dictionary with packages data.
         /// </summary>
-        private void DeserializeAllPackagesInResults()
+        private void DeserializeAllPackagesV1()
         {
             JsonSerializerSettings packageSerializationSettings = new JsonSerializerSettings
             {
@@ -431,20 +563,10 @@ namespace TestplanPackageCounter.UglyCode
                 Culture = CultureInfo.InvariantCulture
             };
 
-            if (this._counterSettings.SdkVersion == SdkVersions.V1)
-            {
-                packageSerializationSettings.Converters.Add(new RequestJsonConverterV1());
-                packageSerializationSettings.Converters.Add(new CommonConverterV1());
-                packageSerializationSettings.Converters.Add(new EventsArrayConverter());
-                packageSerializationSettings.Converters.Add(new LuDataConverter());
-            }
-            else
-            {
-                packageSerializationSettings.Converters.Add(new CommonConverterV2());
-                packageSerializationSettings.Converters.Add(new EventConverter());
-                packageSerializationSettings.Converters.Add(new RequestJsonConverterV2());
-                packageSerializationSettings.Converters.Add(new ResponseJsonConverter());
-            }
+            packageSerializationSettings.Converters.Add(new RequestJsonConverterV1());
+            packageSerializationSettings.Converters.Add(new CommonConverterV1());
+            packageSerializationSettings.Converters.Add(new EventsArrayConverter());
+            packageSerializationSettings.Converters.Add(new LuDataConverter());
 
             foreach (string directory in Directory.GetDirectories(this._counterSettings.PathToResults))
             {
@@ -463,22 +585,12 @@ namespace TestplanPackageCounter.UglyCode
                     {
                         string packageContent = File.ReadAllText(jsonFile, Encoding.UTF8);
 
-                        if (this._counterSettings.SdkVersion == SdkVersions.V1)
-                        {
-                            ProxyPackageInfoV1 deserializedJsonV1 = JsonConvert.DeserializeObject<ProxyPackageInfoV1>(
+                        ProxyPackageInfoV1 deserializedJsonV1 = JsonConvert.DeserializeObject<ProxyPackageInfoV1>(
                                 packageContent,
                                 packageSerializationSettings
                             );
 
-                            packagesList.Add(deserializedJsonV1);
-                        }
-                        else
-                        {
-                            ProxyPackageInfoV2 deserializedJsonV2 = JsonConvert.DeserializeObject<ProxyPackageInfoV2>(
-                                packageContent,
-                                packageSerializationSettings
-                            );
-                        }
+                        packagesList.Add(deserializedJsonV1);
                     }
 
                     string testName = Path.GetFileName(subDirectory);
@@ -486,14 +598,14 @@ namespace TestplanPackageCounter.UglyCode
                     platformPackagesDictionary.Add(testName, packagesList);
                 }
 
-                this._allPackagesDeserialized.Add(platformName, platformPackagesDictionary);
+                this._deserializedPackagesV1.Add(platformName, platformPackagesDictionary);
             }
         }
 
         /// <summary>
         /// Generate csv report.
         /// </summary>
-        private void WriteToCsv()
+        internal void WriteToCsv()
         {
             StringBuilder csvContent = new StringBuilder();
 

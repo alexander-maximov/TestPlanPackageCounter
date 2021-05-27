@@ -17,8 +17,8 @@
             CounterSettings counterSettings = new CounterSettings(
                 pathToTestplan: @"C:\Users\at\Documents\Backup\testplan.json",
                 outcomingPath: @"C:\Users\at\Documents\Backup\testplan_edited.json",
-                pathToResults: @"C:\Users\at\Downloads\results_jenkins-Autotests-Android-v2-FunctionalTests-TestingDaemon-97",
-                sdkVersion: SdkVersions.V2,
+                pathToResults: @"C:\Users\at\Downloads\results (9)",
+                sdkVersion: SdkVersions.V1,
                 rewriteTestplan: true,
                 ignoreUePackages: true,
                 ignoreLastUe: true,
@@ -74,6 +74,12 @@
                     JsonConvert.SerializeObject(testSuites, Formatting.Indented, serializerSettings);
 
                 File.WriteAllText(counterSettings.OutcomingPath, serializedJson);
+            }
+
+            if (counterSettings.WriteToCsv)
+            {
+                packagesEnumerator.WriteToCsv();
+                packagesEnumerator.CheckMaxUe();
             }
         }
 

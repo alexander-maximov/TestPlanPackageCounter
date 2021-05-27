@@ -76,9 +76,11 @@ namespace TestplanPackageCounter.UglyCode
                     string testName = test.Name;
                     #region debug section
                     //TODO: remove me
-                    if (testName.ToUpper() == "TWOLOCATIONWITHOUTANOTHEREVENTSBEFOREINIT")
+                    string compareString = "StartAfterSwitchBeforeInit".ToLower();
+
+                    if (testName.ToLower().Contains(compareString))
                     {
-                        Console.WriteLine();
+                        Console.Write("");
                     }
                     #endregion
                     string fullTestname = string.Concat(testSuiteName, "_", testName).ToUpper();
@@ -106,6 +108,8 @@ namespace TestplanPackageCounter.UglyCode
 
                     if (allPackagesCountAreEqual)
                     {
+                        testData.DefaultPackagesCount = defaultPackagesCount;
+                        testData.PlatformPackagesCount = null;
                         continue;
                     }
                     else
@@ -138,7 +142,7 @@ namespace TestplanPackageCounter.UglyCode
                             min = platformPackages.UwpPackages;
                         }
 
-                        if (platformPackages.WindowsPackages < min)
+                        if (platformPackages.AndroidPackages < min)
                         {
                             min = platformPackages.WindowsPackages;
                         }
@@ -156,7 +160,7 @@ namespace TestplanPackageCounter.UglyCode
                             Windows = null
                         };
 
-                        bool allPackagesAreNull = 
+                        bool allPackagesAreNull =
                             testData.PlatformPackagesCount.Android == null
                             && testData.PlatformPackagesCount.Ios == null
                             && testData.PlatformPackagesCount.MacOS == null
@@ -168,10 +172,15 @@ namespace TestplanPackageCounter.UglyCode
                             testData.PlatformPackagesCount = null;
                         }
 
-                        testData.DefaultPackagesCount = (int)min;
+                        if (min == null)
+                        {
+                            Console.WriteLine($"---{testSuite} {testName} Default packages has 0 value---");
+                        }
 
-                        test.Params = testData;
+                        testData.DefaultPackagesCount = min == null ? 0 : (int)min;
                     }
+
+                    test.Params = testData;
                 }
             }
         }

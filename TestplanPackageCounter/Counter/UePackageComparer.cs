@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Web;
-using TestplanPackageCounter.Packages.Content.V1.Events;
 using TestplanPackageCounter.Packages.Content.V1.Events.UpperLevelEvents;
 
 namespace TestplanPackageCounter.Counter
@@ -14,7 +10,22 @@ namespace TestplanPackageCounter.Counter
     {
         public bool Equals(ProxyPackageInfoV1 x, ProxyPackageInfoV1 y)
         {
-            try
+            NameValueCollection firstParamsUrl =
+                HttpUtility.ParseQueryString(new UriBuilder(x.RequestUrl).Query);
+            NameValueCollection secondParamsUrl =
+                HttpUtility.ParseQueryString(new UriBuilder(y.RequestUrl).Query);
+
+            bool signaturesAreEquals = 
+                firstParamsUrl["s"] != null
+                && firstParamsUrl["s"] == secondParamsUrl["s"];
+
+            if (signaturesAreEquals)
+            {          
+                return true;
+            }
+
+            return false;
+            /*try
             {
                 if (x.RequestJson is LuData firstLuData && y.RequestJson is LuData secondLuData)
                 {
@@ -32,13 +43,13 @@ namespace TestplanPackageCounter.Counter
                             NameValueCollection secondParamsUrl =
                                 HttpUtility.ParseQueryString(new UriBuilder(y.RequestUrl).Query);
 
-                            bool paramsEquals = firstParamsUrl["s"] == secondParamsUrl["s"];
+                            bool signaturesEquals = firstParamsUrl["s"] == secondParamsUrl["s"];
 
                             bool lengthEquals = firstUe.Length == secondUe.Length;
                             bool timestampEquals = firstUe.Timestamp == secondUe.Timestamp;
                             bool sessionIdEquals = firstUe.SessionId == secondUe.SessionId;
 
-                            if (lengthEquals && timestampEquals && sessionIdEquals)
+                            if (signaturesEquals)
                             {
                                 return true;
                             }
@@ -52,6 +63,7 @@ namespace TestplanPackageCounter.Counter
             {
                 return false;
             }
+            */
         }
 
         public int GetHashCode(ProxyPackageInfoV1 obj)
