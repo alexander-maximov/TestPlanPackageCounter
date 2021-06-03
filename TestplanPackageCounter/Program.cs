@@ -1,7 +1,6 @@
 ﻿namespace TestplanPackageCounter
 {
     using Newtonsoft.Json;
-    using System;
     using System.Collections.Generic;
     using System.IO;
     using TestplanPackageCounter.Counter;
@@ -9,6 +8,7 @@
     using TestplanPackageCounter.Testplan.Content;
     using TestplanPackageCounter.Testplan.Converters;
     using TestplanPackageCounter.UglyCode;
+    using TestplanPackageCounter.UglyCode.PackagesEnumerator;
 
     class Program
     {
@@ -17,8 +17,8 @@
             CounterSettings counterSettings = new CounterSettings(
                 pathToTestplan: @"C:\Users\at\Documents\Backup\testplan.json",
                 outcomingPath: @"C:\Users\at\Documents\Backup\testplan_edited.json",
-                pathToResults: @"C:\Users\at\Downloads\results (9)",
-                sdkVersion: SdkVersions.V1,
+                pathToResults: @"C:\Users\at\Downloads\BigData",
+                sdkVersion: SdkVersions.V2,
                 rewriteTestplan: true,
                 ignoreUePackages: true,
                 ignoreLastUe: true,
@@ -54,19 +54,35 @@
             }
             
             Dictionary<string, bool> testBeforeCleanDictionary = GetToKnowCleaningTest(testSuites);
+            Dictionary<string, Dictionary<string, int>> packagesDictionary = new Dictionary<string, Dictionary<string, int>>();
 
-            PackagesEnumerator packagesEnumerator = new PackagesEnumerator(counterSettings);
-            packagesEnumerator.Enumerate(testBeforeCleanDictionary);
+            //PLUG!
+            Dictionary<string, int> MaxUeDictionary = new Dictionary<string, int>();
+            //PLUG!
 
-            Dictionary<string, Dictionary<string, int>> packagesDictionary =
-                packagesEnumerator.PackagesDictionary;
+            if (counterSettings.SdkVersion == SdkVersions.V1)
+            {
+                PackagesEnumeratorV1 packagesEnumerator = new PackagesEnumeratorV1(counterSettings.PathToResults);
+                packagesEnumerator.Enumerate(testBeforeCleanDictionary);
+                packagesDictionary = packagesEnumerator.PackagesDictionary;
+                //PLUG!
+                MaxUeDictionary = packagesEnumerator.MaxUeDictionary;
+            }
+            else
+            {
+                PackagesEnumeratorV2 packagesEnumerator = new PackagesEnumeratorV2(counterSettings.PathToResults);
+                packagesEnumerator.Enumerate(testBeforeCleanDictionary);
+                packagesDictionary = packagesEnumerator.PackagesDictionary;
+
+                MaxUeDictionary = packagesEnumerator.MaxUeDictionary;
+            }
 
             if (counterSettings.RewriteTestplan)
             {
                 TestPlanEditor testSuiteEditor = new TestPlanEditor(
                         testSuites,
                         packagesDictionary,
-                        packagesEnumerator.MaxUeDictionary
+                        MaxUeDictionary
                     );
                 testSuiteEditor.EditTestPlan();
 
@@ -78,8 +94,10 @@
 
             if (counterSettings.WriteToCsv)
             {
+                /*
                 packagesEnumerator.WriteToCsv();
                 packagesEnumerator.CheckMaxUe();
+                */
             }
         }
 

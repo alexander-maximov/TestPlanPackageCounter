@@ -24,5 +24,12 @@
         [JsonProperty("Windows")]
         [DefaultValue(null)]
         public int? Windows { get; set; }
+
+        public bool IsAllPackageEqualsNull() =>
+            this.Android == null
+            && this.Ios == null
+            && this.MacOS == null
+            && this.Uwp == null
+            && this.Windows == null;
     }
 }

@@ -66,11 +66,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Counter\UePackageComparer.cs" />
+    <Compile Include="Counter\PackageComparerV1.cs" />
+    <Compile Include="Counter\PackageComparerV2.cs" />
     <Compile Include="Counter\PackageTypesCounter.cs" />
     <Compile Include="General\Constants.cs" />
     <Compile Include="General\EscapedStringResolver.cs" />
-    <Compile Include="General\EventExtensions.cs" />
+    <Compile Include="General\EventExtensionsV1.cs" />
+    <Compile Include="General\EventExtensionsV2.cs" />
     <Compile Include="Packages\Content\General\IHasTimestamp.cs" />
     <Compile Include="Packages\Content\V2\Analytics\AnalyticsRequest.cs" />
     <Compile Include="Packages\Content\V2\Analytics\Events\AbstractSdkEventV2.cs" />
@@ -156,7 +158,10 @@
     <Compile Include="Packages\Content\V1\Events\UserData.cs" />
     <Compile Include="General\Platforms.cs" />
     <Compile Include="General\SdkVersions.cs" />
-    <Compile Include="UglyCode\PackagesEnumerator.cs" />
+    <Compile Include="UglyCode\PackagesEnumerator\CommonEnumerator.cs" />
+    <Compile Include="UglyCode\PackagesEnumerator\PackagesEnumeratorV1.cs" />
+    <Compile Include="UglyCode\PackagesEnumerator\PackagesEnumeratorV2.cs" />
+    <Compile Include="UglyCode\PackageWorks.cs" />
     <Compile Include="Counter\PlatformPackagesCount.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

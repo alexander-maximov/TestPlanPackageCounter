@@ -19,7 +19,7 @@ using TestplanPackageCounter.Packages.Converters.V2;
 
 namespace TestplanPackageCounter.UglyCode
 {
-    internal class PackagesEnumerator
+    internal class PackageWorks
     {
         private readonly CounterSettings _counterSettings;
 
@@ -35,7 +35,7 @@ namespace TestplanPackageCounter.UglyCode
         internal Dictionary<string, Dictionary<string, (int, bool)>> PlatformUeDictionary { get; set; }
         internal Dictionary<string, Dictionary<string, int>> PackagesDictionary { get; set; }
 
-        internal PackagesEnumerator(CounterSettings counterSettings)
+        internal PackageWorks(CounterSettings counterSettings)
         {
             this._counterSettings = counterSettings;
             this.MaxUeDictionary = new Dictionary<string, int>();
@@ -75,6 +75,8 @@ namespace TestplanPackageCounter.UglyCode
             {
                 string platformName = deserializedPlatformPackages.Key;
 
+                Console.WriteLine($"\nEnumerating packages for {platformName}");
+
                 Dictionary<string, List<ProxyPackageInfoV2>> platformPackages =
                     deserializedPlatformPackages.Value;
                 Dictionary<string, int> platformPackagesCount =
@@ -84,12 +86,21 @@ namespace TestplanPackageCounter.UglyCode
                 {
                     string testName = deserializedTestPackages.Key;
 
+                    #region debug section
+                    if (testName.ToLower().Contains("alive"))
+                    {
+                        Console.WriteLine();
+                    }
+                    #endregion
+
                     List<ProxyPackageInfoV2> testPackages = deserializedTestPackages.Value;
 
                     platformPackagesCount.Add(
                         testName,
                         testPackages.Count
                     );
+
+                    Console.Write(".");
                 }
 
                 packagesCountDictionary.Add(platformName, platformPackagesCount);
@@ -121,6 +132,8 @@ namespace TestplanPackageCounter.UglyCode
             {
                 string platformName = Path.GetFileName(directory);
 
+                Console.WriteLine($"\nNow reading {platformName}");
+
                 Dictionary<string, List<ProxyPackageInfoV2>> platformPackagesDictionary =
                     new Dictionary<string, List<ProxyPackageInfoV2>>();
 
@@ -145,6 +158,8 @@ namespace TestplanPackageCounter.UglyCode
                     string testName = Path.GetFileName(subDirectory);
 
                     platformPackagesDictionary.Add(testName, packagesList);
+
+                    Console.Write(".");
                 }
 
                 this._deserializedPackagesV2.Add(platformName, platformPackagesDictionary);
@@ -388,7 +403,7 @@ namespace TestplanPackageCounter.UglyCode
         {
             List<ProxyPackageInfoV1> testPackages = deserializedTestPackages;
 
-            UePackageComparer uePackageComparer = new UePackageComparer();
+            PackageComparerV1 uePackageComparer = new PackageComparerV1();
 
             if (this._previousTestUePackages.Count != 0)
             {
