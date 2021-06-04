@@ -15,12 +15,13 @@
         static void Main(string[] args)
         {
             CounterSettings counterSettings = new CounterSettings(
-                pathToTestplan: @"C:\Users\at\Documents\Backup\testplan.json",
-                outcomingPath: @"C:\Users\at\Documents\Backup\testplan_edited.json",
+                pathToTestplan: @"C:\Users\at\Documents\Backup\testplanV2.json",
+                outcomingPath: @"C:\Users\at\Documents\Backup\testplan_editedV2.json",
                 pathToResults: @"C:\Users\at\Downloads\BigData",
                 sdkVersion: SdkVersions.V2,
                 rewriteTestplan: true,
                 ignoreUePackages: true,
+                ignoreLastAl: true,
                 ignoreLastUe: true,
                 calculateWithMaxUe: true,
                 fillWithDefaultParams: false,
@@ -54,35 +55,26 @@
             }
             
             Dictionary<string, bool> testBeforeCleanDictionary = GetToKnowCleaningTest(testSuites);
-            Dictionary<string, Dictionary<string, int>> packagesDictionary = new Dictionary<string, Dictionary<string, int>>();
 
-            //PLUG!
-            Dictionary<string, int> MaxUeDictionary = new Dictionary<string, int>();
-            //PLUG!
+            CommonEnumerator commonEnumerator;
 
             if (counterSettings.SdkVersion == SdkVersions.V1)
             {
-                PackagesEnumeratorV1 packagesEnumerator = new PackagesEnumeratorV1(counterSettings.PathToResults);
-                packagesEnumerator.Enumerate(testBeforeCleanDictionary);
-                packagesDictionary = packagesEnumerator.PackagesDictionary;
-                //PLUG!
-                MaxUeDictionary = packagesEnumerator.MaxUeDictionary;
+                commonEnumerator = new PackagesEnumeratorV1(counterSettings, testBeforeCleanDictionary);
             }
             else
             {
-                PackagesEnumeratorV2 packagesEnumerator = new PackagesEnumeratorV2(counterSettings.PathToResults);
-                packagesEnumerator.Enumerate(testBeforeCleanDictionary);
-                packagesDictionary = packagesEnumerator.PackagesDictionary;
-
-                MaxUeDictionary = packagesEnumerator.MaxUeDictionary;
+                commonEnumerator = new PackagesEnumeratorV2(counterSettings, testBeforeCleanDictionary);
             }
+
+            commonEnumerator.Enumerate();
 
             if (counterSettings.RewriteTestplan)
             {
                 TestPlanEditor testSuiteEditor = new TestPlanEditor(
                         testSuites,
-                        packagesDictionary,
-                        MaxUeDictionary
+                        commonEnumerator.PackagesStatusDictionary,
+                        counterSettings
                     );
                 testSuiteEditor.EditTestPlan();
 
@@ -94,10 +86,13 @@
 
             if (counterSettings.WriteToCsv)
             {
-                /*
-                packagesEnumerator.WriteToCsv();
-                packagesEnumerator.CheckMaxUe();
-                */
+                ReportGenerator reportGenerator = new ReportGenerator(
+                    counterSettings,
+                    commonEnumerator.PackagesStatusDictionary,
+                    GetPlatformList(counterSettings.PathToResults)
+                );
+
+                reportGenerator.WriteToCsv();
             }
         }
 
@@ -152,6 +147,25 @@
             }
 
             return previousTestIsCleanDictionary;
+        }
+
+        /// <summary>
+        /// Get list of platforms from results.
+        /// </summary>
+        /// <param name="resultsPath">Path to results to generate list of platforms based on folder names.</param>
+        /// <returns>List of platforms.</returns>
+        private static List<string> GetPlatformList(string resultsPath)
+        {
+            List<string> platformList = new List<string>();
+
+            foreach (string directory in Directory.GetDirectories(resultsPath))
+            {
+                string platformName = Path.GetFileName(directory);
+
+                platformList.Add(platformName);
+            }
+
+            return platformList;
         }
     }
 }

@@ -16,6 +16,8 @@
 
         internal bool IgnoreLastUe { get; }
 
+        internal bool IgnoreLastAl { get; }
+
         internal bool CalculatePackagesWithMaxUe { get; }
 
         internal bool FillWithDefaultParams { get; }
@@ -34,6 +36,7 @@
             bool rewriteTestplan,
             bool ignoreUePackages,
             bool ignoreLastUe,
+            bool ignoreLastAl,
             bool calculateWithMaxUe,
             bool fillWithDefaultParams,
             bool writeToCsv,
@@ -46,6 +49,7 @@
             this.SdkVersion = sdkVersion;
             this.RewriteTestplan = rewriteTestplan;
             this.IgnoreLastUe = ignoreLastUe;
+            this.IgnoreLastAl = ignoreLastAl;
             this.IgnoreUePackages = ignoreUePackages;
             this.CalculatePackagesWithMaxUe = calculateWithMaxUe;
             this.FillWithDefaultParams = fillWithDefaultParams;

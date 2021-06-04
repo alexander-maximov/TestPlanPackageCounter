@@ -11,7 +11,6 @@ using TestplanPackageCounter.Counter;
 using TestplanPackageCounter.General;
 using TestplanPackageCounter.Packages.Content.General;
 using TestplanPackageCounter.Packages.Content.V2;
-using TestplanPackageCounter.Packages.Content.V2.Analytics;
 using TestplanPackageCounter.Packages.Content.V2.Analytics.Events;
 using TestplanPackageCounter.Packages.Converters.V2;
 
@@ -19,53 +18,26 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 {
     internal class PackagesEnumeratorV2 : CommonEnumerator
     {
-        private readonly string _pathToResults;
-
-        Dictionary<string, Dictionary<string, List<ProxyPackageInfoV2>>> _deserializedPackages =
+        private Dictionary<string, Dictionary<string, List<ProxyPackageInfoV2>>> _deserializedPackages =
                 new Dictionary<string, Dictionary<string, List<ProxyPackageInfoV2>>>();
 
         private List<ProxyPackageInfoV2> _previousTestPackages = new List<ProxyPackageInfoV2>();
-        private List<string> _platformList = new List<string>();
 
-        internal Dictionary<string, Dictionary<string, int>> PackagesDictionary { get; set; }
-
-        internal Dictionary<string, int> MaxUeDictionary { get; set; }
-
-        internal PackagesEnumeratorV2(string pathToResults)
+        internal PackagesEnumeratorV2(CounterSettings counterSettings, Dictionary<string, bool> testBeforeCleanDictionary)
         {
-            this._pathToResults = pathToResults;
+            this._counterSettings = counterSettings;
             this.MaxUeDictionary = new Dictionary<string, int>();
-            this._platformList = this.GetPlatformList(pathToResults);
+            this._platformList = this.GetPlatformList(counterSettings.PathToResults);
+            this._testBeforeCleanDictionary = testBeforeCleanDictionary;
+            this.PackagesStatusDictionary = new Dictionary<string, Dictionary<string, TestPackagesData>>();
         }
 
-        internal void Enumerate(Dictionary<string, bool> testBeforeCleanDictionary)
+        internal override void Enumerate()
         {
-            Dictionary<string, Dictionary<string, int>> packagesDictionary =
-                new Dictionary<string, Dictionary<string, int>>();
-
             this.DeserializeAllPackagesV2();
-            packagesDictionary = this.EnumeratePackagesV2(testBeforeCleanDictionary);
+            this.PackagesStatusDictionary = this.EnumeratePackagesV2();
 
-            this.PackagesDictionary = this.ConvertPackageDictionary(packagesDictionary);
-        }
-
-        /// <summary>
-        /// Get list of platforms from results.
-        /// </summary>
-        /// <param name="resultsPath">Path to results to generate list of platforms based on folder names.</param>
-        /// <returns>List of platforms.</returns>
-        private List<string> GetPlatformList(string resultsPath)
-        {
-            List<string> platformList = new List<string>();
-
-            foreach (string directory in Directory.GetDirectories(resultsPath))
-            {
-                string platformName = Path.GetFileName(directory);
-
-                platformList.Add(platformName);
-            }
-
-            return platformList;
+            this.PackagesStatusDictionary = this.ConvertPackageDictionary(PackagesStatusDictionary);
         }
 
         /// <summary>
@@ -90,7 +62,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             packageSerializationSettings.Converters.Add(new RequestJsonConverterV2());
             packageSerializationSettings.Converters.Add(new ResponseJsonConverter());
 
-            foreach (string directory in Directory.GetDirectories(this._pathToResults))
+            foreach (string directory in Directory.GetDirectories(this._counterSettings.PathToResults))
             {
                 string platformName = Path.GetFileName(directory);
 
@@ -125,64 +97,13 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
         }
 
         /// <summary>
-        /// Convert packages dictionary from platform separated dictionary of dictionary of test and packages count 
-        /// to dictionary of tests and packages count, separated by platform.
-        /// </summary>
-        /// <param name="packagesDictionary">Source dictionary.</param>
-        /// <param name="platformList">List of platforms to separate packages count.</param>
-        /// <returns>Dictionary of tests and packages count, separated by platform.</returns>
-        private Dictionary<string, Dictionary<string, int>> ConvertPackageDictionary(
-            Dictionary<string, Dictionary<string, int>> packagesDictionary
-        )
-        {
-            Dictionary<string, Dictionary<string, int>> convertedDictionary =
-                new Dictionary<string, Dictionary<string, int>>();
-
-            foreach (var platform in packagesDictionary)
-            {
-                foreach (var testName in platform.Value)
-                {
-                    string upperKey = testName.Key.ToUpper();
-
-                    if (convertedDictionary.ContainsKey(upperKey))
-                    {
-                        convertedDictionary[upperKey][platform.Key] = testName.Value;
-                        continue;
-                    }
-
-                    Dictionary<string, int> innerDictionary = new Dictionary<string, int>
-                    {
-                        { platform.Key, testName.Value }
-                    };
-
-                    convertedDictionary.Add(upperKey, innerDictionary);
-                }
-            }
-
-            foreach (var testName in convertedDictionary)
-            {
-                foreach (var platformName in this._platformList)
-                {
-                    if (!testName.Value.Keys.Contains(platformName))
-                    {
-                        testName.Value.Add(platformName, -1);
-                    }
-                }
-            }
-
-            return convertedDictionary;
-        }
-
-        /// <summary>
         /// Calculates packages in given result folder.
         /// </summary>
         /// <returns>Platform separated dictionary of dictionary of test and packages.</returns>
-        private Dictionary<string, Dictionary<string, int>> EnumeratePackagesV2(
-            Dictionary<string, bool> testBeforeCleanDictionary = null
-        )
+        private Dictionary<string, Dictionary<string, TestPackagesData>> EnumeratePackagesV2()
         {
-            Dictionary<string, Dictionary<string, int>> packagesCountDictionary =
-                new Dictionary<string, Dictionary<string, int>>();
+            Dictionary<string, Dictionary<string, TestPackagesData>> packagesDataDictionary = 
+                new Dictionary<string, Dictionary<string, TestPackagesData>>();
 
             foreach (var deserializedPlatformPackages in this._deserializedPackages)
             {
@@ -190,155 +111,127 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                 Dictionary<string, List<ProxyPackageInfoV2>> platformPackages =
                     deserializedPlatformPackages.Value;
-                Dictionary<string, int> platformPackagesCount =
-                    new Dictionary<string, int>();
+                Dictionary<string, TestPackagesData> platformPackagesData = new Dictionary<string, TestPackagesData>();
 
                 foreach (var deserializedTestPackages in platformPackages)
                 {
                     string testName = deserializedTestPackages.Key;
 
-                    #region for debug
-                    //TODO: remove me
-                    string compareString = "StartAfterSwitchBeforeInit".ToLower();
-
-                    if (testName.ToLower().Contains(compareString))
-                    {
-                        Console.Write("");
-                    }
-                    #endregion                    
-
-                    List<ProxyPackageInfoV2> testPackagesOriginal =
-                        new List<ProxyPackageInfoV2>(deserializedTestPackages.Value);
-
-                    this._previousTestPackages = new List<ProxyPackageInfoV2>(deserializedTestPackages.Value);
-
-                    List<ProxyPackageInfoV2> testPackages =
-                        GetTestPackagesWithoutDoubles(deserializedTestPackages.Value);
-
-                    bool showTestName = false;
-
-                    if (testPackagesOriginal.Count != testPackages.Count)
-                    {
-                        var excludedPackages = testPackagesOriginal.Except(testPackages);
-
-                        Console.WriteLine($"{platformName} {testName}");
-                        showTestName = true;
-
-                        foreach (var excludedPackage in excludedPackages)
-                        {
-                            NameValueCollection paramsUrl =
-                                HttpUtility.ParseQueryString(new UriBuilder(excludedPackage.RequestUrl).Query);
-
-                            Console.WriteLine($"Double package signature: s={paramsUrl["s"]}");
-                        }
-                    }
-
-                    List<AlV2> alEvents = testPackages.AllEventsOfType<AlV2>().OrderBy(e => e.Timestamp).ToList();
-
-                    #region find last al
-                    IEnumerable<IHasTimestamp> timestampEvents = testPackages.AllEventsOfType<IHasTimestamp>().OrderBy(e => e.Timestamp).ToList();
-
-                    AlV2 lastAlEvent = null;
-
-                    if (timestampEvents.Count() != 0 && alEvents.Count() != 0)
-                    {
-                        if (timestampEvents.Last() is AlV2 alEvent
-                            && alEvent == alEvents.Last())
-                        {
-                            lastAlEvent = alEvent;
-                        }
-                    }
-
-                    ProxyPackageInfoV2 packageWithLastAlEvent = lastAlEvent.FindPackage(testPackages);
-                    #endregion
-
-                    #region find alPackages
-                    List<ProxyPackageInfoV2> packagesWithAlEvents = new List<ProxyPackageInfoV2>();
-
-                    foreach (AlV2 alEvent in alEvents)
-                    {
-                        packagesWithAlEvents.Add(alEvent.FindPackage(testPackages));
-                    }
-
-                    packagesWithAlEvents = packagesWithAlEvents.Distinct().ToList();
-                    #endregion
-
-                    #region find Ue packages
-                    List<ProxyPackageInfoV2> packagesWithUeEvents = new List<ProxyPackageInfoV2>();
-                    IEnumerable<UeV2> ueEvents = testPackages.AllEventsOfType<UeV2>();
-
-                    foreach (UeV2 ueEvent in ueEvents)
-                    {
-                        packagesWithUeEvents.Add(ueEvent.FindPackage(testPackages));
-                    }
-
-                    packagesWithUeEvents = packagesWithUeEvents.Distinct().ToList();
-                    #endregion
-
-                    platformPackagesCount.Add(
-                        testName,
-                        testPackages.Count() - packagesWithUeEvents.Count() - (packageWithLastAlEvent != null ? 1 : 0)
+                    TestPackagesData testPackagesData = this.CalculatePackages(
+                        new List<ProxyPackageInfoV2>(deserializedTestPackages.Value),
+                        testName
                     );
 
-                    bool lastUePackageRemoved = false;
+                    platformPackagesData.Add(testName, testPackagesData);
+                }
 
-                    if (testBeforeCleanDictionary != null
-                        && testBeforeCleanDictionary.ContainsKey(testName.ToUpper())
-                        && testBeforeCleanDictionary[testName.ToUpper()]
+                packagesDataDictionary.Add(platformName, platformPackagesData);
+            }
+
+            return packagesDataDictionary;
+        }
+
+        private List<string> PackagesDoubleCheck(List<ProxyPackageInfoV2> testPackages, List<ProxyPackageInfoV2> testPackagesOriginal)
+        {
+            List<string> doublesSignaturesList = new List<string>();
+
+            if (testPackagesOriginal.Count != testPackages.Count)
+            {
+                IEnumerable<ProxyPackageInfoV2> doublesPackages = testPackagesOriginal.Except(testPackages);
+
+                foreach (ProxyPackageInfoV2 doublePackage in doublesPackages)
+                {
+                    NameValueCollection paramsUrl =
+                        HttpUtility.ParseQueryString(new UriBuilder(doublePackage.RequestUrl).Query);
+
+                    doublesSignaturesList.Add(paramsUrl["s"]);
+                }
+            }
+
+            return doublesSignaturesList;
+        }
+
+        private IEnumerable<ProxyPackageInfoV2> FindAllPackagesOfEvent<T>(IEnumerable<ProxyPackageInfoV2> testPackages)
+        {
+            List<ProxyPackageInfoV2> packagesWithDesiredEventType = new List<ProxyPackageInfoV2>();
+
+            IEnumerable<T> desiredTypeEvents = testPackages.AllEventsOfType<T>();
+
+            foreach (T desiredTypeEvent in desiredTypeEvents)
+            {
+                if (desiredTypeEvent is AbstractSdkEventV2 abstractSdkEvent)
+                {
+                    packagesWithDesiredEventType.Add(abstractSdkEvent.FindPackage(testPackages));
+                }
+            }
+
+            return packagesWithDesiredEventType.Distinct();
+        }
+
+        private TestPackagesData CalculatePackages(
+            List<ProxyPackageInfoV2> testPackagesOriginal,
+            string testName
+        )
+        {
+            List<ProxyPackageInfoV2> testPackages =
+                GetTestPackagesWithoutDoubles(new List<ProxyPackageInfoV2>(testPackagesOriginal));
+
+            this._previousTestPackages = new List<ProxyPackageInfoV2>(testPackagesOriginal);
+
+            List<string> doublesSignatures = this.PackagesDoubleCheck(testPackages, testPackagesOriginal);
+            List<ProxyPackageInfoV2> alContainingPackages = this.FindAllPackagesOfEvent<AlV2>(testPackages).ToList();
+            List<ProxyPackageInfoV2> ueContainingPackages = this.FindAllPackagesOfEvent<UeV2>(testPackages).ToList();
+
+            ProxyPackageInfoV2 packageWithLastAlEvent = GetPackageWithLastEventOfType<AlV2>(testPackages);
+            ProxyPackageInfoV2 packageWithLastUeEvent = GetPackageWithLastEventOfType<UeV2>(testPackages);
+
+            bool previousTestContainsClean = this._testBeforeCleanDictionary != null
+                && this._testBeforeCleanDictionary.ContainsKey(testName.ToUpper())
+                && this._testBeforeCleanDictionary[testName.ToUpper()];
+
+            TestPackagesData testPackagesData = new TestPackagesData(
+                originalPackagesCount: testPackagesOriginal.Count,
+                packagesCount: testPackages.Count,
+                alPackagesCount: alContainingPackages.Count,
+                uePackagesCount: ueContainingPackages.Count,
+                lastAlRemoved: (previousTestContainsClean && this._counterSettings.IgnoreLastAl) && packageWithLastAlEvent != null,
+                lastUeRemoved: (previousTestContainsClean && this._counterSettings.IgnoreLastUe) && packageWithLastUeEvent != null,
+                doublesSignatures: doublesSignatures
+            );
+
+            return testPackagesData;
+        }
+
+        private ProxyPackageInfoV2 GetPackageWithLastEventOfType<T>(IEnumerable<ProxyPackageInfoV2> testPackages)
+        {
+            IEnumerable<T> desiredTypeEvents = testPackages.AllEventsOfType<T>();
+            IEnumerable<IHasTimestamp> timestampEvents = testPackages.AllEventsOfType<IHasTimestamp>().OrderBy(e => e.Timestamp);
+
+            if (desiredTypeEvents.Count() != 0 && timestampEvents.Count() != 0)
+            {
+                IHasTimestamp lastEventByTimestamp = timestampEvents.Last();
+
+                foreach (T desiredTypeEvent in desiredTypeEvents)
+                {
+                    if (desiredTypeEvent is IHasTimestamp timestampEvent
+                        && timestampEvent == lastEventByTimestamp
                     )
                     {
-                        packagesWithAlEvents.Remove(packageWithLastAlEvent);
-
-                        if (!showTestName)
-                        {
-                            Console.WriteLine($"{platformName} {testName}");
-                            showTestName = true;
-                        }
-
-                        Console.WriteLine("Last Ue dropped.");
-                        #region for doubles Ue report
-                        lastUePackageRemoved = true;
-                        #endregion
-                    }
-
-                    int maxAlPackagesCount = packagesWithUeEvents.Count;
-                    /*
-                    #region for doubles Ue report
-                    if (this.PlatformUeDictionary.ContainsKey(platformName))
-                    {
-                        this.PlatformUeDictionary[platformName].Add(testName, (maxUePackagesCount, lastUePackageRemoved));
-                    }
-                    else
-                    {
-                        this.PlatformUeDictionary.Add(platformName, new Dictionary<string, (int, bool)>());
-                        this.PlatformUeDictionary[platformName].Add(testName, (maxUePackagesCount, lastUePackageRemoved));
-                    }
-                    #endregion  
-                    */
-
-                    string ueDictionaryTestName = testName.ToUpper();
-
-                    if (this.MaxUeDictionary.ContainsKey(ueDictionaryTestName))
-                    {
-                        this.MaxUeDictionary[ueDictionaryTestName] = maxAlPackagesCount > this.MaxUeDictionary[ueDictionaryTestName]
-                            ? maxAlPackagesCount
-                            : this.MaxUeDictionary[ueDictionaryTestName];
-                    }
-                    else
-                    {
-                        this.MaxUeDictionary.Add(ueDictionaryTestName, maxAlPackagesCount);
-                    }
-
-                    if (showTestName)
-                    {
-                        Console.WriteLine("---------------------------------------------------");
+                        lastEventByTimestamp = timestampEvent;
                     }
                 }
 
-                packagesCountDictionary.Add(platformName, platformPackagesCount);
+                if (lastEventByTimestamp is T &&
+                    lastEventByTimestamp is AbstractSdkEventV2 abstractSdkEvent
+                )
+                {
+                    ProxyPackageInfoV2 packageWithDesiredEvent = abstractSdkEvent.FindPackage(testPackages);
+                    return packageWithDesiredEvent.AllEvents().Count() == 1 ? packageWithDesiredEvent : null;
+                }
+
             }
 
-            return packagesCountDictionary;
+            return null;
         }
 
         private List<ProxyPackageInfoV2> GetTestPackagesWithoutDoubles(

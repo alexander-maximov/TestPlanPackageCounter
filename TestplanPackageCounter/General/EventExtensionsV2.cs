@@ -56,6 +56,12 @@ namespace TestplanPackageCounter.General
         public static IEnumerable<AbstractSdkEventV2> AllEvents(this IEnumerable<ProxyPackageInfoV2> packages) =>
             packages.AllPackagesData().AllEvents();
 
+        public static IEnumerable<AbstractSdkEventV2> AllEvents(this ProxyPackageInfoV2 package)
+        {
+            IEnumerable<ProxyPackageInfoV2> singlePackage = new List<ProxyPackageInfoV2>() { package };
+            return singlePackage.AllPackagesData().AllEvents();
+        }
+
         public static IEnumerable<T> AllEventsOfType<T>(this IEnumerable<ProxyPackageInfoV2> proxyPackages)
         {
             return proxyPackages.AllReportsDatas().AllEventsOfType<T>().ToList();

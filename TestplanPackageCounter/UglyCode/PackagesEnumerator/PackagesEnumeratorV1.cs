@@ -19,53 +19,28 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 {
     internal class PackagesEnumeratorV1 : CommonEnumerator
     {
-        private readonly string _pathToResults;
-
         Dictionary<string, Dictionary<string, List<ProxyPackageInfoV1>>> _deserializedPackages =
                 new Dictionary<string, Dictionary<string, List<ProxyPackageInfoV1>>>();
 
         private List<ProxyPackageInfoV1> _previousTestUePackages = new List<ProxyPackageInfoV1>();
-        private List<string> _platformList = new List<string>();
 
-        internal Dictionary<string, Dictionary<string, int>> PackagesDictionary { get; set; }
-
-        internal Dictionary<string, int> MaxUeDictionary { get; set; }
-
-        internal PackagesEnumeratorV1(string pathToResults)
+        internal PackagesEnumeratorV1(CounterSettings counterSettings, Dictionary<string, bool> testBeforeCleanDictionary)
         {
-            this._pathToResults = pathToResults;
+            this._counterSettings = counterSettings;
             this.MaxUeDictionary = new Dictionary<string, int>();
-            this._platformList = this.GetPlatformList(pathToResults);
+            this._platformList = this.GetPlatformList(counterSettings.PathToResults);
+            this._testBeforeCleanDictionary = testBeforeCleanDictionary;
         }
 
-        internal void Enumerate(Dictionary<string, bool> testBeforeCleanDictionary)
+        internal override void Enumerate()
         {
             Dictionary<string, Dictionary<string, int>> packagesDictionary =
                 new Dictionary<string, Dictionary<string, int>>();
 
             this.DeserializeAllPackagesV1();
-            packagesDictionary = this.EnumeratePackagesV1(testBeforeCleanDictionary);
+            packagesDictionary = this.EnumeratePackagesV1(this._testBeforeCleanDictionary);
 
-            this.PackagesDictionary = this.ConvertPackageDictionary(packagesDictionary);
-        }
-
-        /// <summary>
-        /// Get list of platforms from results.
-        /// </summary>
-        /// <param name="resultsPath">Path to results to generate list of platforms based on folder names.</param>
-        /// <returns>List of platforms.</returns>
-        private List<string> GetPlatformList(string resultsPath)
-        {
-            List<string> platformList = new List<string>();
-
-            foreach (string directory in Directory.GetDirectories(resultsPath))
-            {
-                string platformName = Path.GetFileName(directory);
-
-                platformList.Add(platformName);
-            }
-
-            return platformList;
+            //this.PackagesDictionary = this.ConvertPackageDictionary(packagesDictionary);
         }
 
         /// <summary>
@@ -90,7 +65,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             packageSerializationSettings.Converters.Add(new EventsArrayConverter());
             packageSerializationSettings.Converters.Add(new LuDataConverter());
 
-            foreach (string directory in Directory.GetDirectories(this._pathToResults))
+            foreach (string directory in Directory.GetDirectories(this._counterSettings.PathToResults))
             {
                 string platformName = Path.GetFileName(directory);
 
@@ -122,55 +97,6 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                 this._deserializedPackages.Add(platformName, platformPackagesDictionary);
             }
-        }
-
-        /// <summary>
-        /// Convert packages dictionary from platform separated dictionary of dictionary of test and packages count 
-        /// to dictionary of tests and packages count, separated by platform.
-        /// </summary>
-        /// <param name="packagesDictionary">Source dictionary.</param>
-        /// <param name="platformList">List of platforms to separate packages count.</param>
-        /// <returns>Dictionary of tests and packages count, separated by platform.</returns>
-        private Dictionary<string, Dictionary<string, int>> ConvertPackageDictionary(
-            Dictionary<string, Dictionary<string, int>> packagesDictionary
-        )
-        {
-            Dictionary<string, Dictionary<string, int>> convertedDictionary =
-                new Dictionary<string, Dictionary<string, int>>();
-
-            foreach (var platform in packagesDictionary)
-            {
-                foreach (var testName in platform.Value)
-                {
-                    string upperKey = testName.Key.ToUpper();
-
-                    if (convertedDictionary.ContainsKey(upperKey))
-                    {
-                        convertedDictionary[upperKey][platform.Key] = testName.Value;
-                        continue;
-                    }
-
-                    Dictionary<string, int> innerDictionary = new Dictionary<string, int>
-                    {
-                        { platform.Key, testName.Value }
-                    };
-
-                    convertedDictionary.Add(upperKey, innerDictionary);
-                }
-            }
-
-            foreach (var testName in convertedDictionary)
-            {
-                foreach (var platformName in this._platformList)
-                {
-                    if (!testName.Value.Keys.Contains(platformName))
-                    {
-                        testName.Value.Add(platformName, -1);
-                    }
-                }
-            }
-
-            return convertedDictionary;
         }
 
         /// <summary>
