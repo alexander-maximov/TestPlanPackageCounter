@@ -67,14 +67,22 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                     if (testPackagesData.AlPackagesCount > 0)
                     {
-                        stringBuilder.Append($"Al count: {testPackagesData.AlPackagesCount} |");
-                        stringBuilder.Append($"Removed: {testPackagesData.AlPackagesCount - testPackagesData.AlPackagesCountWithoutIgnored} |");
+                        stringBuilder.Append($"Al total: {testPackagesData.AlPackagesCount} |");
+
+                        if (testPackagesData.LastAlEventRemoved)
+                        {
+                            stringBuilder.Append($"Without last: {testPackagesData.AlPackagesCountWithoutIgnored} |");
+                        }
                     }
 
                     if (testPackagesData.UePackagesCount > 0)
                     {
-                        stringBuilder.Append($"Ue count: {testPackagesData.UePackagesCount} |");
-                        stringBuilder.Append($"Removed: {testPackagesData.UePackagesCount - testPackagesData.UePackagesCountWithoutIgnored} |");
+                        stringBuilder.Append($"Ue total: {testPackagesData.UePackagesCount} |");
+
+                        if (testPackagesData.LastUeEventRemoved)
+                        {
+                            stringBuilder.Append($"Without last: {testPackagesData.UePackagesCountWithoutIgnored} |");
+                        }
                     }
 
                     int packgesCountWithoutDoublesAndLastEvents = testPackagesData.PackagesCountWithoutUeAndAl + testPackagesData.UePackagesCountWithoutIgnored + testPackagesData.AlPackagesCountWithoutIgnored;

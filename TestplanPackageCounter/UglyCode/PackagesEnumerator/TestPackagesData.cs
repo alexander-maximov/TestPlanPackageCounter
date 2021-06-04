@@ -56,7 +56,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             this.UePackagesCountWithoutIgnored =
                 this.LastUeEventRemoved ? this.UePackagesCount - 1 : this.UePackagesCount;
             this.PackagesCountWithoutUeAndAl =
-                this.PackagesCount - (this.AlPackagesCountWithoutIgnored + this.UePackagesCountWithoutIgnored);
+                this.PackagesCount - (this.AlPackagesCount + this.UePackagesCount);
         }
     }
 }
