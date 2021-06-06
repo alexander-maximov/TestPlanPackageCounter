@@ -36,7 +36,6 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
         {
             this.DeserializeAllPackagesV2();
             this.PackagesStatusDictionary = this.EnumeratePackagesV2();
-
             this.PackagesStatusDictionary = this.ConvertPackageDictionary(PackagesStatusDictionary);
         }
 
@@ -131,26 +130,6 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             return packagesDataDictionary;
         }
 
-        private List<string> PackagesDoubleCheck(List<ProxyPackageInfoV2> testPackages, List<ProxyPackageInfoV2> testPackagesOriginal)
-        {
-            List<string> doublesSignaturesList = new List<string>();
-
-            if (testPackagesOriginal.Count != testPackages.Count)
-            {
-                IEnumerable<ProxyPackageInfoV2> doublesPackages = testPackagesOriginal.Except(testPackages);
-
-                foreach (ProxyPackageInfoV2 doublePackage in doublesPackages)
-                {
-                    NameValueCollection paramsUrl =
-                        HttpUtility.ParseQueryString(new UriBuilder(doublePackage.RequestUrl).Query);
-
-                    doublesSignaturesList.Add(paramsUrl["s"]);
-                }
-            }
-
-            return doublesSignaturesList;
-        }
-
         private IEnumerable<ProxyPackageInfoV2> FindAllPackagesOfEvent<T>(IEnumerable<ProxyPackageInfoV2> testPackages)
         {
             List<ProxyPackageInfoV2> packagesWithDesiredEventType = new List<ProxyPackageInfoV2>();
@@ -174,7 +153,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
         )
         {
             List<ProxyPackageInfoV2> testPackages =
-                GetTestPackagesWithoutDoubles(new List<ProxyPackageInfoV2>(testPackagesOriginal));
+                this.GetTestPackagesWithoutDoubles(new List<ProxyPackageInfoV2>(testPackagesOriginal));
 
             this._previousTestPackages = new List<ProxyPackageInfoV2>(testPackagesOriginal);
 
@@ -182,8 +161,8 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             List<ProxyPackageInfoV2> alContainingPackages = this.FindAllPackagesOfEvent<AlV2>(testPackages).ToList();
             List<ProxyPackageInfoV2> ueContainingPackages = this.FindAllPackagesOfEvent<UeV2>(testPackages).ToList();
 
-            ProxyPackageInfoV2 packageWithLastAlEvent = GetPackageWithLastEventOfType<AlV2>(testPackages);
-            ProxyPackageInfoV2 packageWithLastUeEvent = GetPackageWithLastEventOfType<UeV2>(testPackages);
+            ProxyPackageInfoV2 packageWithLastAlEvent = this.GetPackageWithLastEventOfType<AlV2>(testPackages);
+            ProxyPackageInfoV2 packageWithLastUeEvent = this.GetPackageWithLastEventOfType<UeV2>(testPackages);
 
             bool previousTestContainsClean = this._testBeforeCleanDictionary != null
                 && this._testBeforeCleanDictionary.ContainsKey(testName.ToUpper())

@@ -25,7 +25,7 @@
         /// <param name="desiredluEvent">Desired Lu event.</param>
         /// <returns>Package, containing desired Lu Event.</returns>
         public static ProxyPackageInfoV1 FindPackageForLuEvent(
-            this List<ProxyPackageInfoV1> packagesList,
+            this IEnumerable<ProxyPackageInfoV1> packagesList,
             Dictionary<int, LuEvent> desiredluEvent
         )
         {
@@ -46,6 +46,18 @@
             }
 
             return null;
+        }
+
+        public static ProxyPackageInfoV1 FindPackageForSubEvent(
+            this AbstractSdkEvent desiredEvent,
+            IEnumerable<ProxyPackageInfoV1> packages
+        )
+        {
+            Dictionary<EventType, AbstractSdkEvent[]> subEventPack = 
+                packages.GetAllLuEvents().GetAllLevelSubevents().FindSubeventPackForEvent(desiredEvent);
+            Dictionary<int, LuEvent> luEvent = packages.GetAllLuEvents().FindLuEventForEventsPack(subEventPack);
+
+            return packages.FindPackageForLuEvent(luEvent);
         }
 
         /// <summary>
@@ -188,6 +200,18 @@
             }
 
             return luEventsList;
+        }
+
+        public static IEnumerable<Dictionary<int, LuEvent>> GetAllLuEvents(
+            this ProxyPackageInfoV1 package
+        )
+        {
+            if (package.RequestJson is LuData luData)
+            {
+                return new List<Dictionary<int, LuEvent>>() { luData.LuEvents };
+            }
+
+            return null;
         }
     }
 }

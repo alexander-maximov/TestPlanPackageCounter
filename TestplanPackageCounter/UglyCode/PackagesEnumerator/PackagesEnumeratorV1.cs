@@ -22,7 +22,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
         Dictionary<string, Dictionary<string, List<ProxyPackageInfoV1>>> _deserializedPackages =
                 new Dictionary<string, Dictionary<string, List<ProxyPackageInfoV1>>>();
 
-        private List<ProxyPackageInfoV1> _previousTestUePackages = new List<ProxyPackageInfoV1>();
+        private List<ProxyPackageInfoV1> _previousTestPackages = new List<ProxyPackageInfoV1>();
 
         internal PackagesEnumeratorV1(CounterSettings counterSettings, Dictionary<string, bool> testBeforeCleanDictionary)
         {
@@ -30,17 +30,14 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             this.MaxUeDictionary = new Dictionary<string, int>();
             this._platformList = this.GetPlatformList(counterSettings.PathToResults);
             this._testBeforeCleanDictionary = testBeforeCleanDictionary;
+            this.PackagesStatusDictionary = new Dictionary<string, Dictionary<string, TestPackagesData>>();
         }
 
         internal override void Enumerate()
         {
-            Dictionary<string, Dictionary<string, int>> packagesDictionary =
-                new Dictionary<string, Dictionary<string, int>>();
-
             this.DeserializeAllPackagesV1();
-            packagesDictionary = this.EnumeratePackagesV1(this._testBeforeCleanDictionary);
-
-            //this.PackagesDictionary = this.ConvertPackageDictionary(packagesDictionary);
+            this.PackagesStatusDictionary = this.EnumeratePackagesV1();
+            this.PackagesStatusDictionary = this.ConvertPackageDictionary(PackagesStatusDictionary);
         }
 
         /// <summary>
@@ -103,12 +100,10 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
         /// Calculates packages in given result folder.
         /// </summary>
         /// <returns>Platform separated dictionary of dictionary of test and packages.</returns>
-        private Dictionary<string, Dictionary<string, int>> EnumeratePackagesV1(
-            Dictionary<string, bool> testBeforeCleanDictionary = null
-        )
+        private Dictionary<string, Dictionary<string, TestPackagesData>> EnumeratePackagesV1()
         {
-            Dictionary<string, Dictionary<string, int>> packagesCountDictionary =
-                new Dictionary<string, Dictionary<string, int>>();
+            Dictionary<string, Dictionary<string, TestPackagesData>> packagesDataDictionary =
+                new Dictionary<string, Dictionary<string, TestPackagesData>>();
 
             foreach (var deserializedPlatformPackages in this._deserializedPackages)
             {
@@ -116,125 +111,112 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                 Dictionary<string, List<ProxyPackageInfoV1>> platformPackages =
                     deserializedPlatformPackages.Value;
-                Dictionary<string, int> platformPackagesCount =
-                    new Dictionary<string, int>();
+                Dictionary<string, TestPackagesData> platformPackagesData =
+                    new Dictionary<string, TestPackagesData>();
 
                 foreach (var deserializedTestPackages in platformPackages)
                 {
                     string testName = deserializedTestPackages.Key;
 
-                    #region for debug
-                    //TODO: remove me
-                    string compareString = "StartAfterSwitchBeforeInit".ToLower();
-
-                    if (testName.ToLower().Contains(compareString))
-                    {
-                        Console.Write("");
-                    }
-                    #endregion                    
-
-                    List<ProxyPackageInfoV1> testPackagesOriginal =
-                        new List<ProxyPackageInfoV1>(deserializedTestPackages.Value);
-                    List<ProxyPackageInfoV1> testPackages =
-                        GetTestPackagesWithoutUeDoubles(deserializedTestPackages.Value);
-
-                    bool showTestName = false;
-
-                    if (testPackagesOriginal.Count != testPackages.Count)
-                    {
-                        var excludedPackages = testPackagesOriginal.Except(testPackages);
-
-                        Console.WriteLine($"{platformName} {testName}");
-                        showTestName = true;
-
-                        foreach (var excludedPackage in excludedPackages)
-                        {
-                            NameValueCollection paramsUrl =
-                                HttpUtility.ParseQueryString(new UriBuilder(excludedPackage.RequestUrl).Query);
-
-                            Console.WriteLine($"Double package signature: s={paramsUrl["s"]}");
-                        }
-                    }
-
-                    IEnumerable<Dictionary<int, LuEvent>> luEventList = testPackages.GetAllLuEvents();
-
-                    Dictionary<int, LuEvent> luEventWithLastUe = FindLuEventsWithLastUe(luEventList);
-
-                    List<Dictionary<int, LuEvent>> luEventsWithUe =
-                        this.FindPackagesForSubevents(
-                            luEventList.AllSubeventsOfType<UeEvent>(),
-                            luEventList
-                        ).ToList();
-
-                    this._previousTestUePackages = new List<ProxyPackageInfoV1>(testPackagesOriginal);
-
-                    platformPackagesCount.Add(
-                        testName,
-                        this.CalculatePackages(testPackages, luEventList, luEventsWithUe)
+                    TestPackagesData testPackagesData = this.CalculatePackages(
+                        new List<ProxyPackageInfoV1>(deserializedTestPackages.Value),
+                        testName
                     );
 
-                    bool lastUePackageRemoved = false;
+                    platformPackagesData.Add(testName, testPackagesData);
+                }
 
-                    if (testBeforeCleanDictionary != null
-                        && testBeforeCleanDictionary.ContainsKey(testName.ToUpper())
-                        && testBeforeCleanDictionary[testName.ToUpper()]
+                packagesDataDictionary.Add(platformName, platformPackagesData);
+            }
+
+            return packagesDataDictionary;
+        }
+
+        private TestPackagesData CalculatePackages(
+            List<ProxyPackageInfoV1> testPackagesOriginal,
+            string testName
+        )
+        {
+            List<ProxyPackageInfoV1> testPackages =
+                this.GetTestPackagesWithoutDoubles(new List<ProxyPackageInfoV1>(testPackagesOriginal));
+
+            this._previousTestPackages = new List<ProxyPackageInfoV1>(testPackagesOriginal);
+
+            List<string> doublesSignatures = this.PackagesDoubleCheck(testPackages, testPackagesOriginal);
+            List<ProxyPackageInfoV1> alContainingPackages = this.FindAllPackagesOfEvent<AlEvent>(testPackages).ToList();
+            List<ProxyPackageInfoV1> ueContainingPackages = this.FindAllPackagesOfEvent<UeEvent>(testPackages).ToList();
+
+            ProxyPackageInfoV1 packageWithLastAlEvent = this.GetPackageWithLastEventOfType<AlEvent>(testPackages);
+            ProxyPackageInfoV1 packageWithLastUeEvent = this.GetPackageWithLastEventOfType<UeEvent>(testPackages);
+
+            bool previousTestContainsClean = this._testBeforeCleanDictionary != null
+                && this._testBeforeCleanDictionary.ContainsKey(testName.ToUpper())
+                && this._testBeforeCleanDictionary[testName.ToUpper()];
+
+            TestPackagesData testPackagesData = new TestPackagesData(
+                originalPackagesCount: testPackagesOriginal.Count,
+                packagesCount: testPackages.Count,
+                alPackagesCount: alContainingPackages.Count,
+                uePackagesCount: ueContainingPackages.Count,
+                lastAlRemoved: (previousTestContainsClean && this._counterSettings.IgnoreLastAl) && packageWithLastAlEvent != null,
+                lastUeRemoved: (previousTestContainsClean && this._counterSettings.IgnoreLastUe) && packageWithLastUeEvent != null,
+                doublesSignatures: doublesSignatures
+            );
+
+            return testPackagesData;
+        }
+
+        private ProxyPackageInfoV1 GetPackageWithLastEventOfType<T>(IEnumerable<ProxyPackageInfoV1> testPackages)
+        {
+            IEnumerable<T> desiredTypeEvents = testPackages.GetAllLuEvents().AllSubeventsOfType<T>();
+            IEnumerable<IHasTimestamp> timestampEvents = 
+                testPackages.GetAllLuEvents().AllSubeventsOfType<IHasTimestamp>().OrderBy(e => e.Timestamp);
+
+            if (desiredTypeEvents.Count() != 0 && timestampEvents.Count() != 0)
+            {
+                IHasTimestamp lastEventByTimestamp = timestampEvents.Last();
+
+                foreach (T desiredTypeEvent in desiredTypeEvents)
+                {
+                    if (desiredTypeEvent is IHasTimestamp timestampEvent
+                        && timestampEvent == lastEventByTimestamp
                     )
                     {
-                        luEventsWithUe.Remove(luEventWithLastUe);
-
-                        if (!showTestName)
-                        {
-                            Console.WriteLine($"{platformName} {testName}");
-                            showTestName = true;
-                        }
-
-                        Console.WriteLine("Last Ue dropped.");
-                        #region for doubles Ue report
-                        lastUePackageRemoved = true;
-                        #endregion
-                    }
-
-                    int maxUePackagesCount = luEventsWithUe.Count;
-                    /*
-                    #region for doubles Ue report
-                    if (this.PlatformUeDictionary.ContainsKey(platformName))
-                    {
-                        this.PlatformUeDictionary[platformName].Add(testName, (maxUePackagesCount, lastUePackageRemoved));
-                    }
-                    else
-                    {
-                        this.PlatformUeDictionary.Add(platformName, new Dictionary<string, (int, bool)>());
-                        this.PlatformUeDictionary[platformName].Add(testName, (maxUePackagesCount, lastUePackageRemoved));
-                    }
-                    #endregion  
-                    */
-
-                    string ueDictionaryTestName = testName.ToUpper();
-
-                    if (this.MaxUeDictionary.ContainsKey(ueDictionaryTestName))
-                    {
-                        this.MaxUeDictionary[ueDictionaryTestName] = maxUePackagesCount > this.MaxUeDictionary[ueDictionaryTestName]
-                            ? maxUePackagesCount
-                            : this.MaxUeDictionary[ueDictionaryTestName];
-                    }
-                    else
-                    {
-                        this.MaxUeDictionary.Add(ueDictionaryTestName, maxUePackagesCount);
-                    }
-
-                    if (showTestName)
-                    {
-                        Console.WriteLine("---------------------------------------------------");
+                        lastEventByTimestamp = timestampEvent;
                     }
                 }
 
-                packagesCountDictionary.Add(platformName, platformPackagesCount);
+                if (lastEventByTimestamp is T &&
+                    lastEventByTimestamp is AbstractSdkEvent abstractSdkEvent
+                )
+                {
+                    ProxyPackageInfoV1 packageWithDesiredEvent = abstractSdkEvent.FindPackageForSubEvent(testPackages);
+                    return packageWithDesiredEvent.GetAllLuEvents().GetAllLevelSubevents().Count() == 1 ? packageWithDesiredEvent : null;
+                }
+
             }
 
-            return packagesCountDictionary;
+            return null;
         }
 
-        private List<ProxyPackageInfoV1> GetTestPackagesWithoutUeDoubles(
+        private IEnumerable<ProxyPackageInfoV1> FindAllPackagesOfEvent<T>(IEnumerable<ProxyPackageInfoV1> testPackages)
+        {
+            List<ProxyPackageInfoV1> packagesWithDesiredEventType = new List<ProxyPackageInfoV1>();
+
+            IEnumerable<T> desiredTypeEvents = testPackages.GetAllLuEvents().AllSubeventsOfType<T>();
+
+            foreach (T desiredTypeEvent in desiredTypeEvents)
+            {
+                if (desiredTypeEvent is AbstractSdkEvent abstractSdkEvent)
+                {
+                    packagesWithDesiredEventType.Add(abstractSdkEvent.FindPackageForSubEvent(testPackages));
+                }
+            }
+
+            return packagesWithDesiredEventType.Distinct();
+        }
+
+        private List<ProxyPackageInfoV1> GetTestPackagesWithoutDoubles(
             List<ProxyPackageInfoV1> deserializedTestPackages
         )
         {
@@ -242,13 +224,13 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
             PackageComparerV1 uePackageComparer = new PackageComparerV1();
 
-            if (this._previousTestUePackages.Count != 0)
+            if (this._previousTestPackages.Count != 0)
             {
                 List<ProxyPackageInfoV1> testPackagesToRemove = new List<ProxyPackageInfoV1>();
 
                 foreach (ProxyPackageInfoV1 testPackage in testPackages)
                 {
-                    if (this._previousTestUePackages.Contains(testPackage, uePackageComparer))
+                    if (this._previousTestPackages.Contains(testPackage, uePackageComparer))
                     {
                         testPackagesToRemove.Add(testPackage);
                     }
@@ -261,123 +243,9 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             }
 
             testPackages = testPackages.Distinct(uePackageComparer).ToList();
-            this._previousTestUePackages = new List<ProxyPackageInfoV1>();
+            this._previousTestPackages = new List<ProxyPackageInfoV1>();
 
             return testPackages;
-        }
-
-        /// <summary>
-        /// Gets Lu event containing ue event with highest timestamp value among other subevents.
-        /// </summary>
-        /// <param name="luEventList">List of LuEvents in which to search for an desired value.</param>
-        /// <returns>Lu event with Ue event.</returns>
-        private Dictionary<int, LuEvent> FindLuEventsWithLastUe(IEnumerable<Dictionary<int, LuEvent>> luEventList)
-        {
-            IEnumerable<Dictionary<EventType, AbstractSdkEvent[]>> levelSubeventsList =
-                        luEventList.GetAllLevelSubevents();
-            IEnumerable<AbstractSdkEvent> allSubvents = levelSubeventsList.GetAllSubevents();
-
-            UeEvent lastUeEvent = this.GetLastUeEvent(allSubvents);
-
-            Dictionary<EventType, AbstractSdkEvent[]> levelSubeventWithLastUe =
-                levelSubeventsList.FindSubeventPackForEvent(lastUeEvent, false);
-            Dictionary<int, LuEvent> luEventWithLastUe =
-                luEventList.FindLuEventForEventsPack(levelSubeventWithLastUe, false);
-            return luEventWithLastUe;
-        }
-
-        /// <summary>
-        /// Finds packages list for list of subevents taken.
-        /// </summary>
-        /// <param name="subevents">List of subevents.</param>
-        /// <param name="luEvents">List of packages where to find.</param>
-        /// <returns>List of packages, contains subevents.</returns>
-        private IEnumerable<Dictionary<int, LuEvent>> FindPackagesForSubevents(
-            IEnumerable<AbstractSdkEvent> subevents,
-            IEnumerable<Dictionary<int, LuEvent>> luEvents
-        )
-        {
-            var levelSubevents = luEvents.GetAllLevelSubevents();
-
-            var foundedSubevents = new List<Dictionary<EventType, AbstractSdkEvent[]>>();
-
-            foreach (var subevent in subevents)
-            {
-                Dictionary<EventType, AbstractSdkEvent[]> foundedSubevent =
-                    levelSubevents.FindSubeventPackForEvent(subevent, false);
-
-                foundedSubevents.Add(foundedSubevent);
-            }
-
-            var foundedLuEvents = new List<Dictionary<int, LuEvent>>();
-
-            foreach (var foundedSubevent in foundedSubevents)
-            {
-                Dictionary<int, LuEvent> foundedLuEvent =
-                    luEvents.FindLuEventForEventsPack(foundedSubevent);
-
-                foundedLuEvents.Add(foundedLuEvent);
-            }
-
-            return foundedLuEvents;
-        }
-
-        private int CalculatePackages(
-            List<ProxyPackageInfoV1> testPackages,
-            IEnumerable<Dictionary<int, LuEvent>> luEventList,
-            List<Dictionary<int, LuEvent>> luEventsWithUe
-        )
-        {
-            int luEventPackagesCount = luEventList.Count();
-            luEventPackagesCount -= luEventsWithUe.Count;
-            int notLuEventPackagesCount = this.CountNonLuEventPackages(testPackages);
-            return luEventPackagesCount + notLuEventPackagesCount;
-        }
-
-        /// <summary>
-        /// Searches for last UeEvent in all events which contains timestamp.
-        /// </summary>
-        /// <param name="allSubEvents">Subevents to search.</param>
-        /// <returns>UeEvent or null.</returns>
-        private UeEvent GetLastUeEvent(IEnumerable<AbstractSdkEvent> allSubEvents)
-        {
-            IEnumerable<IHasTimestamp> timeStampEvents =
-                        allSubEvents.OfType<IHasTimestamp>().OrderBy(item => item.Timestamp);
-            IEnumerable<UeEvent> ueEvents = allSubEvents.OfType<UeEvent>().OrderBy(e => e.Timestamp);
-
-            if (timeStampEvents.Count() != 0 && ueEvents.Count() != 0)
-            {
-                UeEvent lastUeEvent = ueEvents.Last();
-
-                if (timeStampEvents.Last() is UeEvent lastTimestampEvent
-                    && lastUeEvent == lastTimestampEvent
-                )
-                {
-                    return lastUeEvent;
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Returns count of packages, not contains LuEvent. I.e. Sdk version info etc.
-        /// </summary>
-        /// <param name="packagesList">List of packages.</param>
-        /// <returns>Count of non-LuEvent packages.</returns>
-        private int CountNonLuEventPackages(IEnumerable<ProxyPackageInfoV1> packagesList)
-        {
-            int LuEventCount = 0;
-
-            foreach (var package in packagesList)
-            {
-                if (package.RequestJson is LuData)
-                {
-                    LuEventCount++;
-                }
-            }
-
-            return packagesList.Count() - LuEventCount;
         }
     }
 }

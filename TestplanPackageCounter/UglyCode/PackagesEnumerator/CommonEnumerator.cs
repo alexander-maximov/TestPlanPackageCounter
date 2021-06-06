@@ -1,7 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
+using System.Web;
 using TestplanPackageCounter.Counter;
+using TestplanPackageCounter.Packages.Content.General;
 
 namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 {
@@ -76,6 +80,29 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             }
 
             return convertedDictionary;
+        }
+
+        protected List<string> PackagesDoubleCheck<T>(List<T> testPackages, List<T> testPackagesOriginal)
+        {
+            List<string> doublesSignaturesList = new List<string>();
+
+            if (testPackagesOriginal.Count != testPackages.Count)
+            {
+                IEnumerable<T> doublesPackages = testPackagesOriginal.Except(testPackages);
+
+                foreach (T doublePackage in doublesPackages)
+                {
+                    if (doublePackage is ProxyPackageInfo packageInfo)
+                    {
+                        NameValueCollection paramsUrl =
+                            HttpUtility.ParseQueryString(new UriBuilder(packageInfo.RequestUrl).Query);
+
+                        doublesSignaturesList.Add(paramsUrl["s"]);
+                    }
+                }
+            }
+
+            return doublesSignaturesList;
         }
     }
 }
