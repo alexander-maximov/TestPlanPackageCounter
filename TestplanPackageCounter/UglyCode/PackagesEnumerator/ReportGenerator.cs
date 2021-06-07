@@ -38,56 +38,75 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
         /// Fill csv with values.
         /// </summary>
         /// <param name="csvContent">Csv contetn builder to fill.</param>
-        /// <param name="convertedDictionary">Set of platforms and tests with packages counting.</param>
-        private static void GenerateRestContent(
+        /// <param name="packagesDataDictionary">Set of platforms and tests with packages counting.</param>
+        private void GenerateRestContent(
             StringBuilder csvContent,
-            Dictionary<string, Dictionary<string, TestPackagesData>> convertedDictionary
+            Dictionary<string, Dictionary<string, TestPackagesData>> packagesDataDictionary
         )
         {
-            foreach (var testName in convertedDictionary)
+            foreach (var packagesData in packagesDataDictionary)
             {
-                string nameofTest = testName.Key;
-                string packagesCount = "";
-                foreach (var platformName in testName.Value.OrderBy(test => test.Key))
+                string nameofTest = packagesData.Key;
+
+                if (nameofTest.ToUpper() == "ANTICHEATSUITE_RECEIPTCALLBACKBEFOREINIT")
                 {
-                    TestPackagesData testPackagesData = platformName.Value;
+                    bool b = false;
+                }
 
-                    StringBuilder stringBuilder = new StringBuilder();
-                    stringBuilder.Append($"Original count: {testPackagesData.OriginalPackagesCount} |");
+                string packagesCount = "";
 
-                    if (testPackagesData.DoublesRemoved)
+                Dictionary<string, TestPackagesData> packagesDataByPlatforms = packagesData.Value;
+
+                foreach (string platformName in this._platformList)
+                {
+                    if (packagesDataByPlatforms.ContainsKey(platformName))
                     {
-                        stringBuilder.AppendLine($"Doubles count: {testPackagesData.DoublesSignatures.Count} |");
+                        TestPackagesData testPackagesData = packagesDataByPlatforms[platformName];
 
-                        foreach (string signature in testPackagesData.DoublesSignatures)
+                        StringBuilder stringBuilder = new StringBuilder();
+                        stringBuilder.Append($"Original count: {testPackagesData.OriginalPackagesCount} |");
+
+                        if (testPackagesData.DoublesRemoved)
                         {
-                            stringBuilder.Append($" - {signature} |");
+                            stringBuilder.AppendLine($"Doubles count: {testPackagesData.DoublesSignatures.Count} |");
+
+                            foreach (string signature in testPackagesData.DoublesSignatures)
+                            {
+                                stringBuilder.Append($" - {signature} |");
+                            }
                         }
+
+                        if (testPackagesData.AlPackagesCount > 0)
+                        {
+                            stringBuilder.Append($"Al total: {testPackagesData.AlPackagesCount} |");
+
+                            if (testPackagesData.LastAlEventRemoved)
+                            {
+                                stringBuilder.Append($"Without last: {testPackagesData.AlPackagesCountWithoutIgnored} |");
+                            }
+                        }
+
+                        if (testPackagesData.UePackagesCount > 0)
+                        {
+                            stringBuilder.Append($"Ue total: {testPackagesData.UePackagesCount} |");
+
+                            if (testPackagesData.LastUeEventRemoved)
+                            {
+                                stringBuilder.Append($"Without last: {testPackagesData.UePackagesCountWithoutIgnored} |");
+                            }
+                        }
+
+                        int packgesCountWithoutDoublesAndLastEvents =
+                                testPackagesData.PackagesCountWithoutUeAndAl
+                                + testPackagesData.UePackagesCountWithoutIgnored
+                                + testPackagesData.AlPackagesCountWithoutIgnored;
+
+                        packagesCount += $";{packgesCountWithoutDoublesAndLastEvents};{stringBuilder}";
+
+                        continue;
                     }
 
-                    if (testPackagesData.AlPackagesCount > 0)
-                    {
-                        stringBuilder.Append($"Al total: {testPackagesData.AlPackagesCount} |");
-
-                        if (testPackagesData.LastAlEventRemoved)
-                        {
-                            stringBuilder.Append($"Without last: {testPackagesData.AlPackagesCountWithoutIgnored} |");
-                        }
-                    }
-
-                    if (testPackagesData.UePackagesCount > 0)
-                    {
-                        stringBuilder.Append($"Ue total: {testPackagesData.UePackagesCount} |");
-
-                        if (testPackagesData.LastUeEventRemoved)
-                        {
-                            stringBuilder.Append($"Without last: {testPackagesData.UePackagesCountWithoutIgnored} |");
-                        }
-                    }
-
-                    int packgesCountWithoutDoublesAndLastEvents = testPackagesData.PackagesCountWithoutUeAndAl + testPackagesData.UePackagesCountWithoutIgnored + testPackagesData.AlPackagesCountWithoutIgnored;
-
-                    packagesCount += $";{packgesCountWithoutDoublesAndLastEvents};{stringBuilder.ToString()}";
+                    packagesCount += ";;";
                 }
                 string newLine = string.Format("{0}{1}", nameofTest, packagesCount);
                 csvContent.AppendLine(newLine);
