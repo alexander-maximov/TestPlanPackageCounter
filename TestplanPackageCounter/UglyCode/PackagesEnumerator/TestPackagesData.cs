@@ -29,11 +29,14 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
         internal int AlPackagesCountWithoutIgnored { get; set; }
 
+        internal int AttemptPackagesCount { get; set; }
+
         internal TestPackagesData(
             int originalPackagesCount,
             int packagesCount,
             int alPackagesCount,
             int uePackagesCount,
+            int attemptPackagesCount,
             bool lastAlRemoved,
             bool lastUeRemoved,
             List<string> doublesSignatures
@@ -57,6 +60,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 this.LastUeEventRemoved ? this.UePackagesCount - 1 : this.UePackagesCount;
             this.PackagesCountWithoutUeAndAl =
                 this.PackagesCount - (this.AlPackagesCount + this.UePackagesCount);
+            this.AttemptPackagesCount = attemptPackagesCount;
         }
     }
 }

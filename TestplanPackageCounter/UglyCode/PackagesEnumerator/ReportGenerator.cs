@@ -48,11 +48,6 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             {
                 string nameofTest = packagesData.Key;
 
-                if (nameofTest.ToUpper() == "ANTICHEATSUITE_RECEIPTCALLBACKBEFOREINIT")
-                {
-                    bool b = false;
-                }
-
                 string packagesCount = "";
 
                 Dictionary<string, TestPackagesData> packagesDataByPlatforms = packagesData.Value;
@@ -96,8 +91,19 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                             }
                         }
 
+                        if (testPackagesData.AttemptPackagesCount > 0)
+                        {
+                            string ignored = this._counterSettings.IgnoreUserIdentificationPackages ? "ignored" : "";
+
+                            stringBuilder.Append($"Attempts {ignored}: {testPackagesData.AttemptPackagesCount} |");
+                        }
+
                         int packgesCountWithoutDoublesAndLastEvents =
-                                testPackagesData.PackagesCountWithoutUeAndAl
+                                (
+                                    this._counterSettings.IgnoreUserIdentificationPackages 
+                                    ? testPackagesData.PackagesCountWithoutUeAndAl - testPackagesData.AttemptPackagesCount
+                                    : testPackagesData.PackagesCountWithoutUeAndAl
+                                )
                                 + testPackagesData.UePackagesCountWithoutIgnored
                                 + testPackagesData.AlPackagesCountWithoutIgnored;
 

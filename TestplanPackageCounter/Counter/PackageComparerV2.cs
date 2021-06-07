@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Web;
+using TestplanPackageCounter.General;
 using TestplanPackageCounter.Packages.Content.V2;
+using TestplanPackageCounter.Packages.Content.V2.Analytics;
+using TestplanPackageCounter.Packages.Content.V2.Analytics.Events;
 
 namespace TestplanPackageCounter.Counter
 {
@@ -10,10 +14,19 @@ namespace TestplanPackageCounter.Counter
     {
         public bool Equals(ProxyPackageInfoV2 x, ProxyPackageInfoV2 y)
         {
-            if (x.RequestUrl == null || y.RequestUrl == null)
+            if (x.RequestJson is AnalyticsRequest && y.RequestJson is AnalyticsRequest)
             {
-                return false;
+                IEnumerable<AbstractSdkEventV2> xEvents = x.AllEvents();
+                IEnumerable<AbstractSdkEventV2> yEvents = y.AllEvents();
+
+                if (x.AllEvents().Equals(y.AllEvents()))
+                {
+                    //TODO: abstractSdkEventV2 comparer
+                    return false;
+                }
             }
+
+            return false;
 
             NameValueCollection firstParamsUrl =
                 HttpUtility.ParseQueryString(new UriBuilder(x.RequestUrl).Query);

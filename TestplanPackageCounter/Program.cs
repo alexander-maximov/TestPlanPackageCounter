@@ -23,6 +23,7 @@
                 ignoreUePackages: true,
                 ignoreLastAl: true,
                 ignoreLastUe: true,
+                ignoreUserIdentification: true,
                 calculateWithMaxUe: true,
                 fillWithDefaultParams: false,
                 writeToCsv: true,

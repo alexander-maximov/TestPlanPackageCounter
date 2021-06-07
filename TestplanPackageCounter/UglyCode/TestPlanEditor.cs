@@ -98,7 +98,6 @@ namespace TestplanPackageCounter.UglyCode
             int maxUe
         )
         {
-            //TODO: UeMax
             int maxCount = 0;
 
             foreach (var testPackages in testPackagesByPlatform)
@@ -111,7 +110,12 @@ namespace TestplanPackageCounter.UglyCode
                     
                     int ueCount = this._counterSettings.CalculatePackagesWithMaxUe ? maxUe : testPackagesData.UePackagesCountWithoutIgnored;
 
-                    int platformCount = testPackagesData.PackagesCountWithoutUeAndAl + testPackagesData.AlPackagesCountWithoutIgnored + ueCount;
+                    int packagesCountWithoutUeAndAl =
+                        this._counterSettings.IgnoreUserIdentificationPackages
+                        ? testPackagesData.PackagesCountWithoutUeAndAl - testPackagesData.AttemptPackagesCount
+                        : testPackagesData.PackagesCountWithoutUeAndAl;
+
+                    int platformCount = packagesCountWithoutUeAndAl + testPackagesData.AlPackagesCountWithoutIgnored + ueCount;
 
                     maxCount = platformCount > maxCount ? platformCount : maxCount;
                 }

@@ -92,7 +92,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                 foreach (T doublePackage in doublesPackages)
                 {
-                    if (doublePackage is ProxyPackageInfo packageInfo)
+                    if (doublePackage is ProxyPackageInfo packageInfo && packageInfo.RequestUrl != null)
                     {
                         NameValueCollection paramsUrl =
                             HttpUtility.ParseQueryString(new UriBuilder(packageInfo.RequestUrl).Query);

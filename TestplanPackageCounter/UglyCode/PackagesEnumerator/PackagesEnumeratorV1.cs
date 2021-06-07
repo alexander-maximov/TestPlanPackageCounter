@@ -1,16 +1,12 @@
 ﻿using Newtonsoft.Json;
-using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Web;
 using TestplanPackageCounter.Counter;
 using TestplanPackageCounter.General;
 using TestplanPackageCounter.Packages.Content.General;
-using TestplanPackageCounter.Packages.Content.V1;
 using TestplanPackageCounter.Packages.Content.V1.Events;
 using TestplanPackageCounter.Packages.Content.V1.Events.UpperLevelEvents;
 using TestplanPackageCounter.Packages.Converters.V1;
@@ -158,6 +154,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 packagesCount: testPackages.Count,
                 alPackagesCount: alContainingPackages.Count,
                 uePackagesCount: ueContainingPackages.Count,
+                attemptPackagesCount: 0,
                 lastAlRemoved: (previousTestContainsClean && this._counterSettings.IgnoreLastAl) && packageWithLastAlEvent != null,
                 lastUeRemoved: (previousTestContainsClean && this._counterSettings.IgnoreLastUe) && packageWithLastUeEvent != null,
                 doublesSignatures: doublesSignatures
