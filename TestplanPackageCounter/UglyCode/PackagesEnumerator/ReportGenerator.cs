@@ -10,17 +10,20 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
     {
         private readonly Dictionary<string, Dictionary<string, TestPackagesData>> _packagesDictionary;
         private readonly CounterSettings _counterSettings;
-        private List<string> _platformList;
+        private readonly List<string> _platformList;
+        private readonly IEnumerable<string> _testsList;
 
         internal ReportGenerator(
             CounterSettings counterSettings, 
             Dictionary<string, Dictionary<string, TestPackagesData>> packagesDictionary,
-            List<string> platformList
+            List<string> platformList,
+            IEnumerable<string> testsList
         )
         {
             this._counterSettings = counterSettings;
             this._packagesDictionary = packagesDictionary;
             this._platformList = platformList;
+            this._testsList = testsList;
         }
 
         /// <summary>
@@ -34,6 +37,124 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             string filePath = Path.Combine(this._counterSettings.PathToResults, "packagesCountNew.csv");
             File.WriteAllText(filePath, csvContent.ToString());
         }
+
+        private Dictionary<string, Dictionary<string, TestPackagesData>> ConvertPackageDictionary(
+            Dictionary<string, Dictionary<string, TestPackagesData>> packagesDictionary
+        )
+        {
+            Dictionary<string, Dictionary<string, TestPackagesData>> convertedDictionary =
+                new Dictionary<string, Dictionary<string, TestPackagesData>>();
+
+            foreach (var platform in packagesDictionary)
+            {
+                foreach (var testName in platform.Value)
+                {
+                    string upperKey = testName.Key.ToUpper();
+
+                    if (convertedDictionary.ContainsKey(upperKey))
+                    {
+                        convertedDictionary[upperKey][platform.Key] = testName.Value;
+                        continue;
+                    }
+
+                    Dictionary<string, TestPackagesData> innerDictionary = new Dictionary<string, TestPackagesData>
+                    {
+                        { platform.Key, testName.Value }
+                    };
+
+                    convertedDictionary.Add(upperKey, innerDictionary);
+                }
+            }
+
+            return convertedDictionary;
+        }
+
+        internal void WriteToEachPlatform()
+        {
+            Dictionary<string, Dictionary<string, TestPackagesData>> convertedPackageDictionary =
+                this.ConvertPackageDictionary(this._packagesDictionary);
+
+            foreach (string platformName in this._platformList)
+            {
+                string filePath = Path.Combine(this._counterSettings.PathToResults, $"{platformName}_packagesCount.csv");
+
+                StringBuilder csvContent = new StringBuilder();
+                //title line
+                csvContent.Append(platformName);
+                csvContent.Append(";packages count");
+                csvContent.Append(";original packages count");
+                csvContent.Append(";ue packages count");
+                csvContent.Append(";ue removed");
+                csvContent.Append(";al packages count");
+                csvContent.Append(";al removed");
+                csvContent.Append(";attempt packages count");
+                csvContent.Append(";ignored packages count");
+                csvContent.Append(";extra events");
+                csvContent.Append(";is events ordered");
+
+                //rest content
+                foreach (string testName in this._testsList)
+                {
+                    csvContent.AppendLine();
+                    csvContent.Append(testName);
+
+                    if (convertedPackageDictionary[platformName.ToUpper()].ContainsKey(testName.ToUpper()))
+                    {
+                        TestPackagesData testPackagesData = convertedPackageDictionary[platformName.ToUpper()][testName.ToUpper()];
+
+                        csvContent.Append($";{testPackagesData.PackagesCountWithoutIgnored}");
+                        csvContent.Append($";{testPackagesData.OriginalPackagesCount}");
+                        csvContent.Append($";{testPackagesData.UePackagesCount}");
+                        csvContent.Append($";{testPackagesData.IsLastUeEventRemoved}");
+                        csvContent.Append($";{testPackagesData.AlPackagesCount}");
+                        csvContent.Append($";{testPackagesData.IsLastAlEventRemoved}");
+                        csvContent.Append($";{testPackagesData.AttemptPackagesCount}");
+                        csvContent.Append($";{testPackagesData.IgnoredPackagesCount}");
+
+                        //TODO: Screw csv! Write in ods or xls
+                        //TODO: Screw this! Count events!
+                        IEnumerable<string> extraEvents = this.FindExtraEvents(testName, platformName);
+
+                        csvContent.Append(";");
+                        if (extraEvents != null && extraEvents.Any())
+                        {
+                            csvContent.Append($"{string.Join("|", extraEvents)}");
+                        }
+
+                        csvContent.Append($";{testPackagesData.IsAllEventsOrdered}");
+                    }
+                }
+
+                File.WriteAllText(filePath, csvContent.ToString());
+            }
+        }
+
+        private IEnumerable<string> FindExtraEvents(string testName, string platformName)
+        {
+            Dictionary<string, TestPackagesData> testData = this._packagesDictionary[testName];
+
+            int min = int.MaxValue;
+
+            foreach (TestPackagesData testPackagesData in testData.Values)
+            {
+                if (testPackagesData.Events.Count() < min)
+                {
+                    min = testPackagesData.Events.Count();
+                }
+            }
+
+            IEnumerable<string> smallestEventsList = testData.First(e => e.Value.Events.Count() == min).Value.Events;
+
+            if (testData.ContainsKey(platformName))
+            {
+                TestPackagesData testPackagesData = testData[platformName];
+
+                return smallestEventsList.Except(testPackagesData.Events);
+            }
+
+            return null;
+        }
+
         /// <summary>
         /// Fill csv with values.
         /// </summary>
@@ -61,9 +182,9 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                         StringBuilder stringBuilder = new StringBuilder();
                         stringBuilder.Append($"Original count: {testPackagesData.OriginalPackagesCount} |");
 
-                        if (testPackagesData.DoublesRemoved)
+                        if (testPackagesData.IsDoublesRemoved)
                         {
-                            stringBuilder.AppendLine($"Doubles count: {testPackagesData.DoublesSignatures.Count} |");
+                            stringBuilder.AppendLine($"Doubles count: {testPackagesData.DoublesSignatures.LongCount()} |");
 
                             foreach (string signature in testPackagesData.DoublesSignatures)
                             {
@@ -75,7 +196,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                         {
                             stringBuilder.Append($"Al total: {testPackagesData.AlPackagesCount} |");
 
-                            if (testPackagesData.LastAlEventRemoved)
+                            if (testPackagesData.IsLastAlEventRemoved)
                             {
                                 stringBuilder.Append($"Without last: {testPackagesData.AlPackagesCountWithoutIgnored} |");
                             }
@@ -85,7 +206,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                         {
                             stringBuilder.Append($"Ue total: {testPackagesData.UePackagesCount} |");
 
-                            if (testPackagesData.LastUeEventRemoved)
+                            if (testPackagesData.IsLastUeEventRemoved)
                             {
                                 stringBuilder.Append($"Without last: {testPackagesData.UePackagesCountWithoutIgnored} |");
                             }

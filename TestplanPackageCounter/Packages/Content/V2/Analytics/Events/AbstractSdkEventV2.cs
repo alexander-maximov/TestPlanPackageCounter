@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System.ComponentModel;
+using TestplanPackageCounter.General;
 using TestplanPackageCounter.Packages.Content.General;
 
 namespace TestplanPackageCounter.Packages.Content.V2.Analytics.Events
@@ -9,5 +10,9 @@ namespace TestplanPackageCounter.Packages.Content.V2.Analytics.Events
         [JsonProperty("inProgress")]
         [DefaultValue(null)]
         public string[] InProgress { get; private set; }
+
+        [JsonProperty("code")]
+        [DefaultValue(Constants.NotExistsString)]
+        public string Code { get; private set; }
     }
 }

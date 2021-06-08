@@ -34,6 +34,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             this.DeserializeAllPackagesV1();
             this.PackagesStatusDictionary = this.EnumeratePackagesV1();
             this.PackagesStatusDictionary = this.ConvertPackageDictionary(PackagesStatusDictionary);
+            this.TestsList = this.GetTestList();
         }
 
         /// <summary>
@@ -155,8 +156,10 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 alPackagesCount: alContainingPackages.Count,
                 uePackagesCount: ueContainingPackages.Count,
                 attemptPackagesCount: 0,
-                lastAlRemoved: (previousTestContainsClean && this._counterSettings.IgnoreLastAl) && packageWithLastAlEvent != null,
-                lastUeRemoved: (previousTestContainsClean && this._counterSettings.IgnoreLastUe) && packageWithLastUeEvent != null,
+                isLastAlRemoved: (previousTestContainsClean && this._counterSettings.IgnoreLastAl) && packageWithLastAlEvent != null,
+                isLastUeRemoved: (previousTestContainsClean && this._counterSettings.IgnoreLastUe) && packageWithLastUeEvent != null,
+                isAllEventsOrdered: true,
+                events: null,
                 doublesSignatures: doublesSignatures
             );
 

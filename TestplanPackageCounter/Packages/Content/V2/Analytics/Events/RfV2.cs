@@ -6,7 +6,7 @@ using TestplanPackageCounter.Packages.Content.V2.Analytics.Events.Entries;
 
 namespace TestplanPackageCounter.Packages.Content.V2.Analytics.Events
 {
-    public class RfV2 : AbstractSdkEventV2, IHasBasicValues, IHasTimestamp, IHasCodeValue
+    public class RfV2 : AbstractSdkEventV2, IHasBasicValues, IHasTimestamp
     {
         [JsonProperty("source")]
         [DefaultValue(Constants.NotExistsString)]
@@ -39,9 +39,5 @@ namespace TestplanPackageCounter.Packages.Content.V2.Analytics.Events
         [JsonProperty("inExperiments")]
         [DefaultValue(null)]
         public IeEntry[] InExperiments { get; private set; }
-
-        [JsonProperty("code")]
-        [DefaultValue(Constants.NotExistsString)]
-        public string Code { get; private set; }
     }
 }

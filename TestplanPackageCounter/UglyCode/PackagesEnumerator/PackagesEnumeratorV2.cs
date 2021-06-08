@@ -36,6 +36,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             this.DeserializeAllPackagesV2();
             this.PackagesStatusDictionary = this.EnumeratePackagesV2();
             this.PackagesStatusDictionary = this.ConvertPackageDictionary(PackagesStatusDictionary);
+            this.TestsList = this.GetTestList();
         }
 
         /// <summary>
@@ -186,6 +187,8 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 packageWithLastAlEvent = this.GetPackageWithLastEventOfType<AlV2>(testPackagesWithoutLastUe);
             }
 
+            List<string> eventCodes = testPackages.AllEvents().Select(e => e.Code).ToList();
+
             bool previousTestContainsClean = this._testBeforeCleanDictionary != null
                 && this._testBeforeCleanDictionary.ContainsKey(testName.ToUpper())
                 && this._testBeforeCleanDictionary[testName.ToUpper()];
@@ -198,12 +201,29 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 alPackagesCount: alContainingPackages.Count,
                 uePackagesCount: ueContainingPackages.Count,
                 attemptPackagesCount: attemptPackages.Count(),
-                lastAlRemoved: (previousTestContainsClean && this._counterSettings.IgnoreLastAl) && packageWithLastAlEvent != null,
-                lastUeRemoved: (previousTestContainsClean && this._counterSettings.IgnoreLastUe) && packageWithLastUeEvent != null,
+                isLastAlRemoved: (previousTestContainsClean && this._counterSettings.IgnoreLastAl) && packageWithLastAlEvent != null,
+                isLastUeRemoved: (previousTestContainsClean && this._counterSettings.IgnoreLastUe) && packageWithLastUeEvent != null,
+                isAllEventsOrdered: CheckEventsTimestampOrder(testPackages),
+                events: eventCodes,
                 doublesSignatures: doublesSignatures
             );
 
             return testPackagesData;
+        }
+
+        private static bool CheckEventsTimestampOrder(List<ProxyPackageInfoV2> testPackages)
+        {
+            foreach (ProxyPackageInfoV2 proxyPackage in testPackages)
+            {
+                IEnumerable<IHasTimestamp> packageEvents = proxyPackage.AllEvents().OfType<IHasTimestamp>();
+
+                if (!packageEvents.SequenceEqual(packageEvents.OrderBy(e => e.Timestamp)))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private ProxyPackageInfoV2 GetPackageWithLastEventOfType<T>(IEnumerable<ProxyPackageInfoV2> testPackages)

@@ -4,7 +4,7 @@ using TestplanPackageCounter.General;
 
 namespace TestplanPackageCounter.Packages.Content.V2.Analytics.Events
 {
-    public class DiV2 : AbstractSdkEventV2, IHasCodeValue
+    public class DiV2 : AbstractSdkEventV2
     {
         [JsonProperty("osVersion")]
         [DefaultValue(Constants.NotExistsString)]
@@ -81,9 +81,5 @@ namespace TestplanPackageCounter.Packages.Content.V2.Analytics.Events
         [JsonProperty("timestamp")]
         [DefaultValue(null)]
         public ulong? Timestamp { get; private set; }
-
-        [JsonProperty("code")]
-        [DefaultValue(Constants.NotExistsString)]
-        public string Code { get; private set; }
     }
 }

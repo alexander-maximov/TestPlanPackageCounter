@@ -83,7 +83,6 @@
     <Compile Include="Packages\Content\V2\Analytics\Events\Entries\IeEntry.cs" />
     <Compile Include="Packages\Content\V2\Analytics\Events\Entries\PeEntry.cs" />
     <Compile Include="Packages\Content\V2\Analytics\Events\IHasBasicValues.cs" />
-    <Compile Include="Packages\Content\V2\Analytics\Events\IHasCodeValue.cs" />
     <Compile Include="Packages\Content\V2\Analytics\Events\LuV2.cs" />
     <Compile Include="Packages\Content\V2\Analytics\Events\PeV2.cs" />
     <Compile Include="Packages\Content\V2\Analytics\Events\PlV2.cs" />

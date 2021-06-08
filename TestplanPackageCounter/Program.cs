@@ -90,10 +90,13 @@
                 ReportGenerator reportGenerator = new ReportGenerator(
                     counterSettings,
                     commonEnumerator.PackagesStatusDictionary,
-                    GetPlatformList(counterSettings.PathToResults)
+                    GetPlatformList(counterSettings.PathToResults),
+                    commonEnumerator.TestsList
                 );
 
-                reportGenerator.WriteToCsv();
+                //Obsolete
+                //reportGenerator.WriteToCsv();
+                reportGenerator.WriteToEachPlatform();
             }
         }
 

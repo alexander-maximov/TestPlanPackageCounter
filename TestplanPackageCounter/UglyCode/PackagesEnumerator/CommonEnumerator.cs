@@ -19,11 +19,13 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
         internal Dictionary<string, Dictionary<string, TestPackagesData>> PackagesStatusDictionary { get; set; }
 
-        internal Dictionary<string, Dictionary<string, int>> PackagesDictionary { get; set; }
-
         internal Dictionary<string, int> MaxUeDictionary { get; set; }
 
+        internal IEnumerable<string> TestsList { get; set; }
+
         internal virtual void Enumerate() { }
+
+        protected IEnumerable<string> GetTestList() => PackagesStatusDictionary.Select(e => e.Key);
 
         /// <summary>
         /// Get list of platforms from results.

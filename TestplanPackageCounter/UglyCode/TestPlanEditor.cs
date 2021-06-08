@@ -10,11 +10,11 @@ namespace TestplanPackageCounter.UglyCode
 {
     internal class TestPlanEditor
     {
-        private List<TestSuite> _testSuites;
+        private readonly List<TestSuite> _testSuites;
 
-        private Dictionary<string, Dictionary<string, TestPackagesData>> _packagesDictionary;
+        private readonly Dictionary<string, Dictionary<string, TestPackagesData>> _packagesDictionary;
 
-        private CounterSettings _counterSettings;
+        private readonly CounterSettings _counterSettings;
 
         internal List<TestSuite> EditedTestSuites { get; set; }
 

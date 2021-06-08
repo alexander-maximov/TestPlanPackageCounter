@@ -5,31 +5,37 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 {
     internal class TestPackagesData
     {
-        internal int OriginalPackagesCount { get; set; }
+        internal int OriginalPackagesCount { get; }
 
-        internal int PackagesCount { get; set; }
+        internal int PackagesCount { get; }
 
-        internal int PackagesCountWithoutUeAndAl { get; set; }
+        internal int PackagesCountWithoutUeAndAl { get; }
 
-        internal int UePackagesCount { get; set; }
+        internal int UePackagesCount { get; }
 
-        internal int AlPackagesCount { get; set; }
+        internal int AlPackagesCount { get; }
 
-        internal bool LastUeEventRemoved { get; set; }
+        internal bool IsLastUeEventRemoved { get; }
 
-        internal bool LastAlEventRemoved { get; set; }
+        internal bool IsLastAlEventRemoved { get; }
 
-        internal int IgnoredPackagesCount { get; set; }
+        internal int IgnoredPackagesCount { get; }
 
-        internal bool DoublesRemoved { get; set; }
+        internal bool IsDoublesRemoved { get; }
 
-        internal List<string> DoublesSignatures { get; set; }
+        internal IEnumerable<string> DoublesSignatures { get; }
 
-        internal int UePackagesCountWithoutIgnored { get; set; }
+        internal IEnumerable<string> Events { get; }
 
-        internal int AlPackagesCountWithoutIgnored { get; set; }
+        internal int UePackagesCountWithoutIgnored { get; }
 
-        internal int AttemptPackagesCount { get; set; }
+        internal int AlPackagesCountWithoutIgnored { get; }
+
+        internal int PackagesCountWithoutIgnored { get; }
+
+        internal int AttemptPackagesCount { get; }
+
+        internal bool IsAllEventsOrdered { get; }
 
         internal TestPackagesData(
             int originalPackagesCount,
@@ -37,30 +43,49 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             int alPackagesCount,
             int uePackagesCount,
             int attemptPackagesCount,
-            bool lastAlRemoved,
-            bool lastUeRemoved,
-            List<string> doublesSignatures
+            bool isLastAlRemoved,
+            bool isLastUeRemoved,
+            bool isAllEventsOrdered,
+            List<string> events,
+            IEnumerable<string> doublesSignatures
         )
         {
             this.OriginalPackagesCount = originalPackagesCount;
             this.PackagesCount = packagesCount;
             this.AlPackagesCount = alPackagesCount;
             this.UePackagesCount = uePackagesCount;
-            this.LastAlEventRemoved = lastAlRemoved;
-            this.LastUeEventRemoved = lastUeRemoved;
+            this.IsLastAlEventRemoved = isLastAlRemoved;
+            this.IsLastUeEventRemoved = isLastUeRemoved;
+            this.IsAllEventsOrdered = isAllEventsOrdered;
             this.DoublesSignatures = doublesSignatures;
-            this.DoublesRemoved = this.DoublesSignatures.Any();
-            this.IgnoredPackagesCount =
-                (this.LastAlEventRemoved ? 1 : 0)
-                + (this.LastUeEventRemoved ? 1 : 0)
-                + this.DoublesSignatures.Count();
+            this.IsDoublesRemoved = this.DoublesSignatures.Any();            
             this.AlPackagesCountWithoutIgnored =
-                this.LastAlEventRemoved ? this.AlPackagesCount - 1 : this.AlPackagesCount;
+                this.IsLastAlEventRemoved ? this.AlPackagesCount - 1 : this.AlPackagesCount;
             this.UePackagesCountWithoutIgnored =
-                this.LastUeEventRemoved ? this.UePackagesCount - 1 : this.UePackagesCount;
+                this.IsLastUeEventRemoved ? this.UePackagesCount - 1 : this.UePackagesCount;
             this.PackagesCountWithoutUeAndAl =
                 this.PackagesCount - (this.AlPackagesCount + this.UePackagesCount);
             this.AttemptPackagesCount = attemptPackagesCount;
+            this.IgnoredPackagesCount =
+                (this.IsLastAlEventRemoved ? 1 : 0)
+                + (this.IsLastUeEventRemoved ? 1 : 0)
+                + this.DoublesSignatures.Count()
+                + this.AttemptPackagesCount;
+
+            if (events != null)
+            {
+                if (this.IsLastAlEventRemoved)
+                {
+                    events.Remove("al");
+                }
+                if (this.IsLastUeEventRemoved)
+                {
+                    events.Remove("ue");
+                }
+                this.Events = events;
+            }
+
+            this.PackagesCountWithoutIgnored = this.PackagesCount - this.IgnoredPackagesCount;
         }
     }
 }
