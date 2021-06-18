@@ -1,29 +1,90 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using TestplanPackageCounter.Counter;
+using TestplanPackageCounter.General;
+using TestplanPackageCounter.Testplan.Content;
 
 namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 {
     internal class ReportGenerator
     {
+        private readonly Dictionary<string, Dictionary<string, TestPackagesData>> convertedPackageDictionary;
         private readonly Dictionary<string, Dictionary<string, TestPackagesData>> _packagesDictionary;
         private readonly CounterSettings _counterSettings;
         private readonly List<string> _platformList;
-        private readonly IEnumerable<string> _testsList;
+        private readonly Dictionary<string, List<string>> _testsList;
+        private readonly List<TestSuite> _testSuites;
 
         internal ReportGenerator(
             CounterSettings counterSettings, 
             Dictionary<string, Dictionary<string, TestPackagesData>> packagesDictionary,
             List<string> platformList,
-            IEnumerable<string> testsList
+            Dictionary<string, List<string>> testsList,
+            List<TestSuite> testSuites
         )
         {
+            //TODO: Write to excel
+
             this._counterSettings = counterSettings;
             this._packagesDictionary = packagesDictionary;
             this._platformList = platformList;
             this._testsList = testsList;
+            this._testSuites = testSuites;
+            this.convertedPackageDictionary = this.ConvertPackageDictionary(packagesDictionary);
+        }
+
+        internal void OverwhelmingOne()
+        {
+            string filePath = Path.Combine(this._counterSettings.PathToResults, "Overwhelming_packagesData.csv");
+
+            StringBuilder csvContent = new StringBuilder();
+
+            //TODO: separate platform and test
+            this.GenerateTitleLine("", csvContent);
+
+            foreach (var packageData in this._packagesDictionary)
+            {
+                string testName = packageData.Key;
+
+                foreach (var platformPackageData in packageData.Value)
+                {
+                    string platformName = platformPackageData.Key;
+
+                    TestPackagesData testPackagesData = platformPackageData.Value;
+
+                    if (testPackagesData.PackagesCountWithoutIgnored == 999)
+                    {
+                        continue;
+                    }
+
+                    csvContent.Append(string.Concat(testName, "_", platformName));
+                    
+                    this.GeneratePackagesData(csvContent, testPackagesData);
+
+                    csvContent.AppendLine();
+                }
+            }
+
+            File.WriteAllText(filePath, csvContent.ToString());
+        }
+
+        private void GeneratePackagesData(StringBuilder csvContent, TestPackagesData testPackagesData)
+        {
+            csvContent.Append($";{testPackagesData.PackagesCountWithoutIgnored}");
+            csvContent.Append($";{testPackagesData.OriginalPackagesCount}");
+            csvContent.Append($";{testPackagesData.UePackagesCount}");
+            csvContent.Append($";{testPackagesData.IsLastUeEventRemoved}");
+            csvContent.Append($";{testPackagesData.AlPackagesCount}");
+            csvContent.Append($";{testPackagesData.IsLastAlEventRemoved}");
+            csvContent.Append($";{testPackagesData.AttemptPackagesCount}");
+            csvContent.Append($";{testPackagesData.BadCodesPackages.Count()}");
+            csvContent.Append($";{testPackagesData.IgnoredPackagesCount}");
+            csvContent.Append($";{testPackagesData.Events.Count()}");
+            csvContent.Append($";{testPackagesData.IsAllEventsOrdered}");
+            csvContent.Append($";{testPackagesData.ContainsZeroCodePackage}");
         }
 
         /// <summary>
@@ -33,8 +94,86 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
         {
             StringBuilder csvContent = new StringBuilder();
             GenerateTitleLine(csvContent);
-            GenerateRestContent(csvContent, this._packagesDictionary);
+            GenerateRestPackageContent(csvContent, this._packagesDictionary);
             string filePath = Path.Combine(this._counterSettings.PathToResults, "packagesCountNew.csv");
+            File.WriteAllText(filePath, csvContent.ToString());
+        }
+
+        internal void EasyTestplanReport()
+        {
+            StringBuilder csvContent = new StringBuilder();
+
+            csvContent.Append("Testplan packages");
+
+            foreach (Platforms platform in Enum.GetValues(typeof(Platforms)))
+            {
+                switch (platform)
+                {
+                    case Platforms.Android:
+                    case Platforms.IOS:
+                    case Platforms.MacOS:
+                    case Platforms.Uwp:
+                    case Platforms.Windows:
+                        csvContent.Append($";{platform}");
+                        break;
+                    default:
+                        continue;
+                }
+            }
+
+            csvContent.AppendLine();
+
+            foreach (TestSuite testSuite in this._testSuites)
+            {
+                string testSuiteName = testSuite.Name;
+
+                foreach (Test test in testSuite.Tests)
+                {
+                    string testName = test.Name;
+
+                    string fullTestName = string.Concat(testSuiteName, "_", testName);
+
+                    if (!this._packagesDictionary.ContainsKey(fullTestName.ToUpper()))
+                    {
+                        continue;
+                    }
+
+                    if (test.Params == null)
+                    {
+                        continue;
+                    }
+
+                    ParamsNulls testParams = (ParamsNulls)test.Params;
+
+                    if (testParams.DefaultPackagesCount == null)
+                    {
+                        continue;
+                    }
+
+                    int defaultCount = (int)testParams.DefaultPackagesCount;
+                    (int android, int ios, int macOs, int uwp, int windows) platformCount = (0, 0, 0, 0, 0);
+                    
+                    if (testParams.PlatformPackagesCount != null)
+                    {
+                        PlatformPackages platformPackages = testParams.PlatformPackagesCount;
+
+                        platformCount.android = (int)(platformPackages.Android != null ? platformPackages.Android : defaultCount);
+                        platformCount.ios = (int)(platformPackages.Ios != null ? platformPackages.Ios : defaultCount);
+                        platformCount.macOs = (int)(platformPackages.MacOS != null ? platformPackages.MacOS : defaultCount);
+                        platformCount.uwp = (int)(platformPackages.Uwp != null ? platformPackages.Uwp : defaultCount);
+                        platformCount.windows = (int)(platformPackages.Windows != null ? platformPackages.Windows : defaultCount);
+                    }                    
+
+                    csvContent.Append($"{fullTestName};");
+                    csvContent.Append($"{platformCount.android};");
+                    csvContent.Append($"{platformCount.ios};");
+                    csvContent.Append($"{platformCount.macOs};");
+                    csvContent.Append($"{platformCount.uwp};");
+                    csvContent.AppendLine($"{platformCount.windows};");
+                }
+            }
+
+            string filePath = Path.Combine(this._counterSettings.PathToResults, "EasyTestplanView.csv");
             File.WriteAllText(filePath, csvContent.ToString());
         }
 
@@ -71,62 +210,47 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
         internal void WriteToEachPlatform()
         {
-            Dictionary<string, Dictionary<string, TestPackagesData>> convertedPackageDictionary =
-                this.ConvertPackageDictionary(this._packagesDictionary);
-
             foreach (string platformName in this._platformList)
             {
                 string filePath = Path.Combine(this._counterSettings.PathToResults, $"{platformName}_packagesCount.csv");
 
                 StringBuilder csvContent = new StringBuilder();
                 //title line
-                csvContent.Append(platformName);
-                csvContent.Append(";packages count");
-                csvContent.Append(";original packages count");
-                csvContent.Append(";ue packages count");
-                csvContent.Append(";ue removed");
-                csvContent.Append(";al packages count");
-                csvContent.Append(";al removed");
-                csvContent.Append(";attempt packages count");
-                csvContent.Append(";ignored packages count");
-                csvContent.Append(";extra events");
-                csvContent.Append(";is events ordered");
+                this.GenerateTitleLine(platformName, csvContent);
 
                 //rest content
-                foreach (string testName in this._testsList)
+                foreach (var testName in this._testsList)
                 {
                     csvContent.AppendLine();
-                    csvContent.Append(testName);
+                    csvContent.Append(testName.Key);
 
-                    if (convertedPackageDictionary[platformName.ToUpper()].ContainsKey(testName.ToUpper()))
+                    if (this.convertedPackageDictionary[platformName.ToUpper()].ContainsKey(testName.Key.ToUpper()))
                     {
-                        TestPackagesData testPackagesData = convertedPackageDictionary[platformName.ToUpper()][testName.ToUpper()];
+                        TestPackagesData testPackagesData = this.convertedPackageDictionary[platformName.ToUpper()][testName.Key.ToUpper()];
 
-                        csvContent.Append($";{testPackagesData.PackagesCountWithoutIgnored}");
-                        csvContent.Append($";{testPackagesData.OriginalPackagesCount}");
-                        csvContent.Append($";{testPackagesData.UePackagesCount}");
-                        csvContent.Append($";{testPackagesData.IsLastUeEventRemoved}");
-                        csvContent.Append($";{testPackagesData.AlPackagesCount}");
-                        csvContent.Append($";{testPackagesData.IsLastAlEventRemoved}");
-                        csvContent.Append($";{testPackagesData.AttemptPackagesCount}");
-                        csvContent.Append($";{testPackagesData.IgnoredPackagesCount}");
-
-                        //TODO: Screw csv! Write in ods or xls
-                        //TODO: Screw this! Count events!
-                        IEnumerable<string> extraEvents = this.FindExtraEvents(testName, platformName);
-
-                        csvContent.Append(";");
-                        if (extraEvents != null && extraEvents.Any())
-                        {
-                            csvContent.Append($"{string.Join("|", extraEvents)}");
-                        }
-
-                        csvContent.Append($";{testPackagesData.IsAllEventsOrdered}");
+                        this.GeneratePackagesData(csvContent, testPackagesData);
                     }
                 }
 
                 File.WriteAllText(filePath, csvContent.ToString());
             }
+        }
+
+        private void GenerateTitleLine(string heading, StringBuilder csvContent)
+        {
+            csvContent.Append(heading);
+            csvContent.Append(";packages count");
+            csvContent.Append(";original packages count");
+            csvContent.Append(";ue packages count");
+            csvContent.Append(";ue removed");
+            csvContent.Append(";al packages count");
+            csvContent.Append(";al removed");
+            csvContent.Append(";attempt packages count");
+            csvContent.Append(";bad code packages count");
+            csvContent.Append(";ignored packages count");
+            csvContent.Append(";events count");
+            csvContent.Append(";is events ordered");
+            csvContent.AppendLine(";contains code 0");
         }
 
         private IEnumerable<string> FindExtraEvents(string testName, string platformName)
@@ -160,7 +284,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
         /// </summary>
         /// <param name="csvContent">Csv contetn builder to fill.</param>
         /// <param name="packagesDataDictionary">Set of platforms and tests with packages counting.</param>
-        private void GenerateRestContent(
+        private void GenerateRestPackageContent(
             StringBuilder csvContent,
             Dictionary<string, Dictionary<string, TestPackagesData>> packagesDataDictionary
         )
@@ -179,46 +303,6 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                     {
                         TestPackagesData testPackagesData = packagesDataByPlatforms[platformName];
 
-                        StringBuilder stringBuilder = new StringBuilder();
-                        stringBuilder.Append($"Original count: {testPackagesData.OriginalPackagesCount} |");
-
-                        if (testPackagesData.IsDoublesRemoved)
-                        {
-                            stringBuilder.AppendLine($"Doubles count: {testPackagesData.DoublesSignatures.LongCount()} |");
-
-                            foreach (string signature in testPackagesData.DoublesSignatures)
-                            {
-                                stringBuilder.Append($" - {signature} |");
-                            }
-                        }
-
-                        if (testPackagesData.AlPackagesCount > 0)
-                        {
-                            stringBuilder.Append($"Al total: {testPackagesData.AlPackagesCount} |");
-
-                            if (testPackagesData.IsLastAlEventRemoved)
-                            {
-                                stringBuilder.Append($"Without last: {testPackagesData.AlPackagesCountWithoutIgnored} |");
-                            }
-                        }
-
-                        if (testPackagesData.UePackagesCount > 0)
-                        {
-                            stringBuilder.Append($"Ue total: {testPackagesData.UePackagesCount} |");
-
-                            if (testPackagesData.IsLastUeEventRemoved)
-                            {
-                                stringBuilder.Append($"Without last: {testPackagesData.UePackagesCountWithoutIgnored} |");
-                            }
-                        }
-
-                        if (testPackagesData.AttemptPackagesCount > 0)
-                        {
-                            string ignored = this._counterSettings.IgnoreUserIdentificationPackages ? "ignored" : "";
-
-                            stringBuilder.Append($"Attempts {ignored}: {testPackagesData.AttemptPackagesCount} |");
-                        }
-
                         int packgesCountWithoutDoublesAndLastEvents =
                                 (
                                     this._counterSettings.IgnoreUserIdentificationPackages 
@@ -228,7 +312,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                                 + testPackagesData.UePackagesCountWithoutIgnored
                                 + testPackagesData.AlPackagesCountWithoutIgnored;
 
-                        packagesCount += $";{packgesCountWithoutDoublesAndLastEvents};{stringBuilder}";
+                        packagesCount += $";{packgesCountWithoutDoublesAndLastEvents}";
 
                         continue;
                     }
@@ -245,20 +329,11 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
         /// <param name="csvContent">Csv contetn builder to fill.</param>
         private void GenerateTitleLine(StringBuilder csvContent)
         {
-            string titleLine;
-            if (this._counterSettings.IgnoreUePackages)
-            {
-                titleLine = this._counterSettings.CalculatePackagesWithMaxUe
-                    ? "With max Ue count"
-                    : "Ue packages ignored";
-            }
-            else
-            {
-                titleLine = "All packages counted";
-            }
+            string titleLine = "";
+
             foreach (string directory in this._platformList)
             {
-                titleLine += $";{Path.GetFileName(directory)};Events data";
+                titleLine += $";{Path.GetFileName(directory)}";
             }
             csvContent.AppendLine(titleLine);
         }

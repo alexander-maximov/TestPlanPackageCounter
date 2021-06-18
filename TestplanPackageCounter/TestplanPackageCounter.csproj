@@ -162,7 +162,6 @@
     <Compile Include="UglyCode\PackagesEnumerator\PackagesEnumeratorV2.cs" />
     <Compile Include="UglyCode\PackagesEnumerator\ReportGenerator.cs" />
     <Compile Include="UglyCode\PackagesEnumerator\TestPackagesData.cs" />
-    <Compile Include="UglyCode\PackageWorks.cs" />
     <Compile Include="Counter\PlatformPackagesCount.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

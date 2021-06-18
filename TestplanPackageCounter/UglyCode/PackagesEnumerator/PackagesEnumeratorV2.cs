@@ -12,6 +12,7 @@ using TestplanPackageCounter.Packages.Content.V2;
 using TestplanPackageCounter.Packages.Content.V2.Analytics.Events;
 using TestplanPackageCounter.Packages.Content.V2.UserIdentification;
 using TestplanPackageCounter.Packages.Converters.V2;
+using TestplanPackageCounter.Testplan.Content;
 
 namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 {
@@ -22,21 +23,22 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
         private List<ProxyPackageInfoV2> _previousTestPackages = new List<ProxyPackageInfoV2>();
 
-        internal PackagesEnumeratorV2(CounterSettings counterSettings, Dictionary<string, bool> testBeforeCleanDictionary)
+        internal PackagesEnumeratorV2(CounterSettings counterSettings, Dictionary<string, bool> testBeforeCleanDictionary, List<TestSuite> testSuites)
         {
             this._counterSettings = counterSettings;
             this.MaxUeDictionary = new Dictionary<string, int>();
             this._platformList = this.GetPlatformList(counterSettings.PathToResults);
             this._testBeforeCleanDictionary = testBeforeCleanDictionary;
             this.PackagesStatusDictionary = new Dictionary<string, Dictionary<string, TestPackagesData>>();
+            this.testSuites = testSuites;
         }
 
         internal override void Enumerate()
-        {
+        {            
+            this.TestsList = this.GetTestList();
             this.DeserializeAllPackagesV2();
             this.PackagesStatusDictionary = this.EnumeratePackagesV2();
-            this.PackagesStatusDictionary = this.ConvertPackageDictionary(PackagesStatusDictionary);
-            this.TestsList = this.GetTestList();
+            this.PackagesStatusDictionary = this.ConvertPackageDictionary(PackagesStatusDictionary);            
         }
 
         /// <summary>
@@ -67,12 +69,17 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             {
                 string platformName = Path.GetFileName(directory);
 
-                Console.Write($"Deserialize {platformName} packages..");
+                Console.WriteLine($"Deserialize {platformName} packages..");
 
                 Dictionary<string, List<ProxyPackageInfoV2>> platformPackagesDictionary =
                     new Dictionary<string, List<ProxyPackageInfoV2>>();
 
-                foreach (string subDirectory in Directory.GetDirectories(directory))
+                string[] subDirectories = Directory.GetDirectories(directory);
+
+                int subDirectoriesCount = subDirectories.Length + 1;
+                int counter = 1;
+
+                foreach (string subDirectory in subDirectories)
                 {
                     List<ProxyPackageInfoV2> packagesList = new List<ProxyPackageInfoV2>();
 
@@ -92,12 +99,22 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                     string testName = Path.GetFileName(subDirectory);
 
+                    if (this.TestsList.ContainsKey(testName.ToUpper()))
+                    {
+                        this.TestsList[testName.ToUpper()].Add(platformName);
+                    }
+
                     platformPackagesDictionary.Add(testName, packagesList);
 
-                    Console.Write(".");
+                    Console.Write($"\r({++counter}/{subDirectoriesCount}) deserialized.");                    
                 }
 
-                Console.WriteLine();
+                if (counter == subDirectoriesCount)
+                {
+                    Console.Write("\rAll packages deserialized.");
+                }
+
+                Console.WriteLine("\n");
 
                 this._deserializedPackages.Add(platformName, platformPackagesDictionary);
             }
@@ -118,29 +135,44 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             {
                 string platformName = deserializedPlatformPackages.Key;
 
-                Console.Write($"Enumerate {platformName} packages..");
+                Console.WriteLine($"Enumerate {platformName} packages..");
 
                 Dictionary<string, List<ProxyPackageInfoV2>> platformPackages =
                     deserializedPlatformPackages.Value;
                 Dictionary<string, TestPackagesData> platformPackagesData = new Dictionary<string, TestPackagesData>();
 
-                foreach (var deserializedTestPackages in platformPackages)
-                {
-                    string testName = deserializedTestPackages.Key;
+                int platformPackagesCount = platformPackages.Count() + 1;
+                int counter = 1;
+                int skipCounter = 0;
 
-                    TestPackagesData testPackagesData = this.CalculatePackages(
-                        new List<ProxyPackageInfoV2>(deserializedTestPackages.Value),
-                        testName
-                    );
+                foreach (var testName in this.TestsList.Keys)
+                {
+                    if (!platformPackages.ContainsKey(testName.ToUpper())
+                        && !this.TestsList[testName.ToUpper()].Contains(platformName))
+                    {
+                        platformPackagesData.Add(testName, new TestPackagesData());
+                        skipCounter++;
+                        continue;
+                    }
+
+                    List<ProxyPackageInfoV2> packagesList = 
+                        platformPackages.FirstOrDefault(e => e.Key.Equals(testName, StringComparison.OrdinalIgnoreCase)).Value;
+
+                    TestPackagesData testPackagesData = this.CalculatePackages(packagesList, testName);
 
                     platformPackagesData.Add(testName, testPackagesData);
 
-                    Console.Write(".");
+                    Console.Write($"\r({++counter}/{platformPackagesCount}) enumerated. ({skipCounter}/{this.TestsList.Count}) tests wasn't in results folder.");                    
+                }
+
+                if (counter == platformPackagesCount)
+                {
+                    Console.Write($"\rAll packages enumerated. ({skipCounter}/{this.TestsList.Count}) tests wasn't in results folder.");
                 }
 
                 packagesDataDictionary.Add(platformName, platformPackagesData);
 
-                Console.WriteLine();
+                Console.WriteLine("\n");
             }
 
             return packagesDataDictionary;
@@ -187,6 +219,19 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 packageWithLastAlEvent = this.GetPackageWithLastEventOfType<AlV2>(testPackagesWithoutLastUe);
             }
 
+            List<ProxyPackageInfo> badCodePackages = new List<ProxyPackageInfo>();
+            bool containsZeroResponseCode = false;
+
+            if (this._counterSettings.IgnoreBadCodePackages)
+            {
+                foreach (ProxyPackageInfoV2 testPackage in testPackages.Where(e => e.ResponseCode == 0 || e.ResponseCode == 404).ToList())
+                {
+                    containsZeroResponseCode = testPackage.ResponseCode == 0;
+
+                    badCodePackages.Add(testPackage);
+                }
+            }
+
             List<string> eventCodes = testPackages.AllEvents().Select(e => e.Code).ToList();
 
             bool previousTestContainsClean = this._testBeforeCleanDictionary != null
@@ -205,7 +250,9 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 isLastUeRemoved: (previousTestContainsClean && this._counterSettings.IgnoreLastUe) && packageWithLastUeEvent != null,
                 isAllEventsOrdered: CheckEventsTimestampOrder(testPackages),
                 events: eventCodes,
-                doublesSignatures: doublesSignatures
+                doublesSignatures: doublesSignatures,
+                badCodesPackages: badCodePackages,
+                containsZeroCodePackage: containsZeroResponseCode
             );
 
             return testPackagesData;

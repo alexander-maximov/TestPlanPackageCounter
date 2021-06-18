@@ -107,17 +107,22 @@ namespace TestplanPackageCounter.UglyCode
                 if (this.IsPlatformValid(this._patternsDictionary[platform], platformName))
                 {
                     TestPackagesData testPackagesData = testPackages.Value;
-                    
-                    int ueCount = this._counterSettings.CalculatePackagesWithMaxUe ? maxUe : testPackagesData.UePackagesCountWithoutIgnored;
 
+                    if (this._counterSettings.IgnoreBadCodePackages
+                        && testPackagesData.ContainsZeroCodePackage
+                    )
+                    {
+                        continue;
+                    }
+
+                    int ueCount = this._counterSettings.CalculatePackagesWithMaxUe ? maxUe : testPackagesData.UePackagesCountWithoutIgnored;
                     int packagesCountWithoutUeAndAl =
                         this._counterSettings.IgnoreUserIdentificationPackages
                         ? testPackagesData.PackagesCountWithoutUeAndAl - testPackagesData.AttemptPackagesCount
                         : testPackagesData.PackagesCountWithoutUeAndAl;
-
                     int platformCount = packagesCountWithoutUeAndAl + testPackagesData.AlPackagesCountWithoutIgnored + ueCount;
 
-                    maxCount = platformCount > maxCount ? platformCount : maxCount;
+                    maxCount = platformCount != 999 && platformCount > maxCount ? platformCount : maxCount;
                 }
             }
 
@@ -136,14 +141,13 @@ namespace TestplanPackageCounter.UglyCode
             int ueCount
         )
         {
-            if (platform == Platforms.Uwp)
+            if (!testPackagesByPlatform.Keys.Any(e => this.IsPlatformValid(this._patternsDictionary[platform], e)))
             {
-                //TODO: This is a plug!
                 return null;
             }
 
-            return this.GetPackagesCountFromResults(testPackagesByPlatform, platform, ueCount)
-            ?? this.PackagesFromPlan(testData, platform);
+            return this.GetPackagesCountFromResults(testPackagesByPlatform, platform, ueCount) 
+                ?? this.PackagesFromPlan(testData, platform);
         }
 
         private int? PackagesFromPlan(ParamsNulls testData, Platforms platform)
@@ -181,10 +185,12 @@ namespace TestplanPackageCounter.UglyCode
             {
                 string testSuiteName = testSuite.Name;
 
+                IEnumerable<Test> existingResultTests = 
+                    testSuite.Tests.Where(e => e.Params is ParamsNulls paramsNulls && paramsNulls.DefaultPackagesCount != 999);
+
                 foreach (var test in testSuite.Tests)
                 {
                     string testName = test.Name;
-
                     string fullTestname = string.Concat(testSuiteName, "_", testName).ToUpper();
 
                     if (test.Params == null)
@@ -198,8 +204,16 @@ namespace TestplanPackageCounter.UglyCode
 
                     int maxUeCount = this.CountMaxUeAmongPlatforms(fullTestname);
 
-                    if (!this._packagesDictionary.ContainsKey(fullTestname))
+                    if (!existingResultTests.Any(e => e.Name.Equals(testName, StringComparison.OrdinalIgnoreCase)))
                     {
+                        //TODO: bullshit! Needs to search key in other collection!
+                        if (this._counterSettings.FillMissingTestPackagesCount)
+                        {
+                            testData.DefaultPackagesCount = 999;
+                            testData.PlatformPackagesCount = null;
+                            test.Params = testData;
+                        }
+
                         continue;
                     }
 
@@ -207,60 +221,60 @@ namespace TestplanPackageCounter.UglyCode
                     {
                         testData.DefaultPackagesCount = defaultPackagesCount;
                         testData.PlatformPackagesCount = null;
+                        test.Params = testData;
+
                         continue;
+                    }
+
+                    Dictionary<string, TestPackagesData> testDataByPlatform = this._packagesDictionary[fullTestname];
+
+                    PlatformPackagesCount platformPackages = new PlatformPackagesCount
+                    {
+                        AndroidPackages = this.GetPlatformPackagesCount(
+                            Platforms.Android, testDataByPlatform, testData, maxUeCount
+                        ),
+                        IosPackages = this.GetPlatformPackagesCount(
+                            Platforms.IOS, testDataByPlatform, testData, maxUeCount
+                        ),
+                        MacOsPackages = this.GetPlatformPackagesCount(
+                            Platforms.MacOS, testDataByPlatform, testData, maxUeCount
+                        ),
+                        UwpPackages = this.GetPlatformPackagesCount(
+                            Platforms.Uwp, testDataByPlatform, testData, maxUeCount
+                        ),
+                        WindowsPackages = this.GetPlatformPackagesCount(
+                            Platforms.Windows, testDataByPlatform, testData, maxUeCount
+                        ),
+                    };
+
+                    int? windowsPackagesCount = platformPackages.WindowsPackages;
+
+                    if (windowsPackagesCount == null)
+                    {
+                        windowsPackagesCount = this.FindMinPackagesCount(platformPackages);
+                    }
+
+                    testData.PlatformPackagesCount = new PlatformPackages
+                    {
+                        Android = platformPackages.AndroidPackages != windowsPackagesCount ? platformPackages.AndroidPackages : null,
+                        Ios = platformPackages.IosPackages != windowsPackagesCount ? platformPackages.IosPackages : null,
+                        MacOS = platformPackages.MacOsPackages != windowsPackagesCount ? platformPackages.MacOsPackages : null,
+                        Uwp = platformPackages.UwpPackages != windowsPackagesCount ? platformPackages.UwpPackages : null,
+                        Windows = null
+                    };
+
+                    if (testData.PlatformPackagesCount.IsAllPackageEqualsNull())
+                    {
+                        testData.PlatformPackagesCount = null;
+                    }
+
+                    if (windowsPackagesCount == null)
+                    {
+                        testData.DefaultPackagesCount = this.FindMinPackagesCount(platformPackages);
                     }
                     else
                     {
-                        Dictionary<string, TestPackagesData> testDataByPlatform = this._packagesDictionary[fullTestname];
-
-                        PlatformPackagesCount platformPackages = new PlatformPackagesCount
-                        {
-                            AndroidPackages = this.GetPlatformPackagesCount(
-                                Platforms.Android, testDataByPlatform, testData, maxUeCount
-                            ),
-                            IosPackages = this.GetPlatformPackagesCount(
-                                Platforms.IOS, testDataByPlatform, testData, maxUeCount
-                            ),
-                            MacOsPackages = this.GetPlatformPackagesCount(
-                                Platforms.MacOS, testDataByPlatform, testData, maxUeCount
-                            ),
-                            UwpPackages = this.GetPlatformPackagesCount(
-                                Platforms.Uwp, testDataByPlatform, testData, maxUeCount
-                            ),
-                            WindowsPackages = this.GetPlatformPackagesCount(
-                                Platforms.Windows, testDataByPlatform, testData, maxUeCount
-                            ),
-                        };
-
-                        int? windowsPackagesCount = platformPackages.WindowsPackages;
-
-                        if (windowsPackagesCount == null)
-                        {
-                            windowsPackagesCount = this.FindMinPackagesCount(platformPackages);
-                        }
-
-                        testData.PlatformPackagesCount = new PlatformPackages
-                        {
-                            Android = platformPackages.AndroidPackages != windowsPackagesCount ? platformPackages.AndroidPackages : null,
-                            Ios = platformPackages.IosPackages != windowsPackagesCount ? platformPackages.IosPackages : null,
-                            MacOS = platformPackages.MacOsPackages != windowsPackagesCount ? platformPackages.MacOsPackages : null,
-                            Uwp = platformPackages.UwpPackages != windowsPackagesCount ? platformPackages.UwpPackages : null,
-                            Windows = null
-                        };
-
-                        if (testData.PlatformPackagesCount.IsAllPackageEqualsNull())
-                        {
-                            testData.PlatformPackagesCount = null;
-                        }
-
-                        if (windowsPackagesCount == null)
-                        {
-                            testData.DefaultPackagesCount = this.FindMinPackagesCount(platformPackages);
-                        }
-                        else
-                        {
-                            testData.DefaultPackagesCount = (int)windowsPackagesCount;
-                        }
+                        testData.DefaultPackagesCount = (int)windowsPackagesCount;
                     }
 
                     test.Params = testData;

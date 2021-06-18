@@ -12,17 +12,19 @@
 
         internal bool RewriteTestplan { get; }
 
-        internal bool IgnoreUePackages { get; }
-
         internal bool IgnoreLastUe { get; }
 
         internal bool IgnoreLastAl { get; }
 
         internal bool IgnoreUserIdentificationPackages { get; }
 
+        internal bool IgnoreBadCodePackages { get; }
+
         internal bool CalculatePackagesWithMaxUe { get; }
 
         internal bool FillWithDefaultParams { get; }
+
+        internal bool FillMissingTestPackagesCount { get; }
 
         internal bool WriteToCsv { get; }
 
@@ -35,15 +37,16 @@
             string outcomingPath,
             string pathToResults,
             SdkVersions sdkVersion,
-            bool rewriteTestplan,
-            bool ignoreUePackages,
-            bool ignoreLastUe,
-            bool ignoreLastAl,
-            bool ignoreUserIdentification,
-            bool calculateWithMaxUe,
-            bool fillWithDefaultParams,
-            bool writeToCsv,
-            bool sortOnly
+            bool rewriteTestplan = true,
+            bool ignoreLastUe = true,
+            bool ignoreLastAl = false,
+            bool ignoreUserIdentification = true,
+            bool ignoreBadCodePackages = true,
+            bool calculateWithMaxUe = true,
+            bool fillWithDefaultParams = false,
+            bool fillMissingTestPackagesCount = false,
+            bool writeToCsv = true,
+            bool sortOnly = false
         )
         {
             this.PathToTestplan = pathToTestplan;
@@ -54,9 +57,10 @@
             this.IgnoreLastUe = ignoreLastUe;
             this.IgnoreLastAl = ignoreLastAl;
             this.IgnoreUserIdentificationPackages = ignoreUserIdentification;
-            this.IgnoreUePackages = ignoreUePackages;
+            this.IgnoreBadCodePackages = ignoreBadCodePackages;
             this.CalculatePackagesWithMaxUe = calculateWithMaxUe;
             this.FillWithDefaultParams = fillWithDefaultParams;
+            this.FillMissingTestPackagesCount = fillMissingTestPackagesCount;
             this.WriteToCsv = writeToCsv;
             this.SortOnly = sortOnly;
         }

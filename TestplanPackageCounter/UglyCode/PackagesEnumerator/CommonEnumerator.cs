@@ -6,6 +6,7 @@ using System.Linq;
 using System.Web;
 using TestplanPackageCounter.Counter;
 using TestplanPackageCounter.Packages.Content.General;
+using TestplanPackageCounter.Testplan.Content;
 
 namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 {
@@ -17,15 +18,15 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
         protected Dictionary<string, bool> _testBeforeCleanDictionary = new Dictionary<string, bool>();
 
+        protected List<TestSuite> testSuites = new List<TestSuite>();
+
         internal Dictionary<string, Dictionary<string, TestPackagesData>> PackagesStatusDictionary { get; set; }
 
         internal Dictionary<string, int> MaxUeDictionary { get; set; }
 
-        internal IEnumerable<string> TestsList { get; set; }
+        internal Dictionary<string, List<string>> TestsList { get; set; }
 
         internal virtual void Enumerate() { }
-
-        protected IEnumerable<string> GetTestList() => PackagesStatusDictionary.Select(e => e.Key);
 
         /// <summary>
         /// Get list of platforms from results.
@@ -44,6 +45,31 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             }
 
             return platformList;
+        }
+
+        protected Dictionary<string, List<string>> GetTestList()
+        {
+            Dictionary<string, List<string>> testList = new Dictionary<string, List<string>>();
+
+            foreach (TestSuite testSuite in this.testSuites)
+            {
+                string testSuiteName = testSuite.Name;
+
+                foreach (Test test in testSuite.Tests)
+                {
+                    string testName = test.Name;
+                    string fullTestName = string.Concat(testSuiteName, "_", testName);
+
+                    if (testList.ContainsKey(fullTestName))
+                    {
+                        continue;
+                    }
+
+                    testList.Add(fullTestName.ToUpper(), new List<string>());
+                }
+            }
+
+            return testList;
         }
 
         /// <summary>

@@ -8,26 +8,21 @@
     using TestplanPackageCounter.Testplan.Content;
     using TestplanPackageCounter.Testplan.Converters;
     using TestplanPackageCounter.UglyCode;
-    using TestplanPackageCounter.UglyCode.PackagesEnumerator;
+    using TestplanPackageCounter.UglyCode.PackagesEnumerator;    
 
     class Program
     {
         static void Main(string[] args)
         {
+            //TODO: pick default values from testplan option, otherwise 999
+            //TODO: null packages removal for v2
             CounterSettings counterSettings = new CounterSettings(
-                pathToTestplan: @"C:\Users\at\Documents\Backup\testplanV2.json",
-                outcomingPath: @"C:\Users\at\Documents\Backup\testplan_editedV2.json",
-                pathToResults: @"C:\Users\at\Downloads\BigData",
+                pathToTestplan: @"c:\Users\at\Downloads\BigData\testplan.json",
+                outcomingPath: @"c:\Users\at\Downloads\BigData\testplan_edited_after_update.json",
+                pathToResults: @"c:\Users\at\Downloads\BigData",
                 sdkVersion: SdkVersions.V2,
-                rewriteTestplan: true,
-                ignoreUePackages: true,
                 ignoreLastAl: true,
-                ignoreLastUe: true,
-                ignoreUserIdentification: true,
-                calculateWithMaxUe: true,
-                fillWithDefaultParams: false,
-                writeToCsv: true,
-                sortOnly: false
+                fillMissingTestPackagesCount: true
             );
 
             JsonSerializerSettings serializerSettings = new JsonSerializerSettings
@@ -61,11 +56,11 @@
 
             if (counterSettings.SdkVersion == SdkVersions.V1)
             {
-                commonEnumerator = new PackagesEnumeratorV1(counterSettings, testBeforeCleanDictionary);
+                commonEnumerator = new PackagesEnumeratorV1(counterSettings, testBeforeCleanDictionary, testSuites);
             }
             else
             {
-                commonEnumerator = new PackagesEnumeratorV2(counterSettings, testBeforeCleanDictionary);
+                commonEnumerator = new PackagesEnumeratorV2(counterSettings, testBeforeCleanDictionary, testSuites);
             }
 
             commonEnumerator.Enumerate();
@@ -77,6 +72,7 @@
                         commonEnumerator.PackagesStatusDictionary,
                         counterSettings
                     );
+
                 testSuiteEditor.EditTestPlan();
 
                 string serializedJson =
@@ -91,12 +87,14 @@
                     counterSettings,
                     commonEnumerator.PackagesStatusDictionary,
                     GetPlatformList(counterSettings.PathToResults),
-                    commonEnumerator.TestsList
+                    commonEnumerator.TestsList,
+                    testSuites
                 );
 
-                //Obsolete
-                //reportGenerator.WriteToCsv();
+                reportGenerator.WriteToCsv();
                 reportGenerator.WriteToEachPlatform();
+                reportGenerator.EasyTestplanReport();
+                reportGenerator.OverwhelmingOne();
             }
         }
 
