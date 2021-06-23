@@ -111,7 +111,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                 if (counter == subDirectoriesCount)
                 {
-                    Console.Write("\rAll packages deserialized.");
+                    Console.Write($"\rAll {subDirectoriesCount} packages deserialized.");
                 }
 
                 Console.WriteLine("\n");
@@ -167,7 +167,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                 if (counter == platformPackagesCount)
                 {
-                    Console.Write($"\rAll packages enumerated. ({skipCounter}/{this.TestsList.Count}) tests wasn't in results folder.");
+                    Console.Write($"\rAll {platformPackagesCount} packages enumerated. ({skipCounter}/{this.TestsList.Count}) tests wasn't in results folder.");
                 }
 
                 packagesDataDictionary.Add(platformName, platformPackagesData);

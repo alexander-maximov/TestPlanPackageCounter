@@ -110,10 +110,13 @@ namespace TestplanPackageCounter.UglyCode
 
                     if (this._counterSettings.IgnoreBadCodePackages
                         && testPackagesData.ContainsZeroCodePackage
+                        || testPackagesData.PackagesCount == 999
                     )
                     {
                         continue;
                     }
+
+                    //TODO: here's some bug with 999 count!
 
                     int ueCount = this._counterSettings.CalculatePackagesWithMaxUe ? maxUe : testPackagesData.UePackagesCountWithoutIgnored;
                     int packagesCountWithoutUeAndAl =
@@ -151,7 +154,12 @@ namespace TestplanPackageCounter.UglyCode
         }
 
         private int? PackagesFromPlan(ParamsNulls testData, Platforms platform)
-        {            
+        {
+            if (this._counterSettings.FillMissingTestPackagesCount)
+            {
+                return null;
+            }
+
             if (testData.PlatformPackagesCount != null)
             {
                 switch (platform)
@@ -270,7 +278,15 @@ namespace TestplanPackageCounter.UglyCode
 
                     if (windowsPackagesCount == null)
                     {
-                        testData.DefaultPackagesCount = this.FindMinPackagesCount(platformPackages);
+                        if (platformPackages.GetType().GetProperties().All(e => e.GetValue(platformPackages) == null))
+                        {
+                            testData.DefaultPackagesCount = 999;
+                            testData.PlatformPackagesCount = null;
+                        }
+                        else
+                        {
+                            testData.DefaultPackagesCount = this.FindMinPackagesCount(platformPackages);
+                        }
                     }
                     else
                     {

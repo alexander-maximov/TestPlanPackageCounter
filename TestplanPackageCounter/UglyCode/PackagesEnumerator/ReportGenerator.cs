@@ -43,7 +43,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             StringBuilder csvContent = new StringBuilder();
 
             //TODO: separate platform and test
-            this.GenerateTitleLine("", csvContent);
+            this.GenerateTitleLine("Test name", csvContent, true, "Platform");
 
             foreach (var packageData in this._packagesDictionary)
             {
@@ -51,7 +51,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                 foreach (var platformPackageData in packageData.Value)
                 {
-                    string platformName = platformPackageData.Key;
+                    string platformName = platformPackageData.Key.Replace("TestResults_", "");
 
                     TestPackagesData testPackagesData = platformPackageData.Value;
 
@@ -60,7 +60,8 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                         continue;
                     }
 
-                    csvContent.Append(string.Concat(testName, "_", platformName));
+                    csvContent.Append(testName);
+                    csvContent.Append($";{platformName}");
                     
                     this.GeneratePackagesData(csvContent, testPackagesData);
 
@@ -85,6 +86,11 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             csvContent.Append($";{testPackagesData.Events.Count()}");
             csvContent.Append($";{testPackagesData.IsAllEventsOrdered}");
             csvContent.Append($";{testPackagesData.ContainsZeroCodePackage}");
+            
+            foreach (string eventCode in testPackagesData.Events.OrderBy(e => e))
+            {
+                csvContent.Append($";{eventCode}");
+            }
         }
 
         /// <summary>
@@ -236,9 +242,15 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             }
         }
 
-        private void GenerateTitleLine(string heading, StringBuilder csvContent)
+        private void GenerateTitleLine(string heading, StringBuilder csvContent, bool doubleHeading = false, string doubleHeadingLine = "")
         {
             csvContent.Append(heading);
+
+            if (doubleHeading)
+            {
+                csvContent.Append($";{doubleHeadingLine}");
+            }
+
             csvContent.Append(";packages count");
             csvContent.Append(";original packages count");
             csvContent.Append(";ue packages count");

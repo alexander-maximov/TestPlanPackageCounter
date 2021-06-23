@@ -17,9 +17,9 @@
             //TODO: pick default values from testplan option, otherwise 999
             //TODO: null packages removal for v2
             CounterSettings counterSettings = new CounterSettings(
-                pathToTestplan: @"c:\Users\at\Downloads\BigData\testplan.json",
-                outcomingPath: @"c:\Users\at\Downloads\BigData\testplan_edited_after_update.json",
-                pathToResults: @"c:\Users\at\Downloads\BigData",
+                pathToTestplan: @"C:\Users\at\Downloads\NewBigData\testplan.json",
+                outcomingPath: @"C:\Users\at\Downloads\NewBigData\testplan_edited_new_condition.json",
+                pathToResults: @"C:\Users\at\Downloads\NewBigData",
                 sdkVersion: SdkVersions.V2,
                 ignoreLastAl: true,
                 fillMissingTestPackagesCount: true
