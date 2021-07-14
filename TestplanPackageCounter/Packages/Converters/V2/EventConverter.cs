@@ -25,6 +25,9 @@ namespace TestplanPackageCounter.Packages.Converters.V2
                 {EventTypeV2.Pl, typeof(PlV2)},
                 {EventTypeV2.Rf, typeof(RfV2)},
                 {EventTypeV2.Rp, typeof(RpV2)},
+                {EventTypeV2.Sbs, typeof(SbsV2)},
+                {EventTypeV2.Sbsp, typeof(SbspV2)},
+                {EventTypeV2.Sbsr, typeof(SbsrV2)},
                 {EventTypeV2.Sc, typeof(ScV2)},
                 {EventTypeV2.Sp, typeof(SpV2)},
                 {EventTypeV2.Ss, typeof(SsV2)},
@@ -40,6 +43,11 @@ namespace TestplanPackageCounter.Packages.Converters.V2
         private protected override Type GetRuntimeType(JObject jsonObject, Type _)
         {
             JProperty eventCodeProperty = jsonObject.Property("code");
+
+            if (eventCodeProperty == null)
+            {
+                throw new Exception("Contains no events");
+            }
 
             string eventTypeName = eventCodeProperty.Value.ToString();
             EventTypeV2 eventType = (EventTypeV2)Enum.Parse(this._eventsType, eventTypeName, true);

@@ -48,6 +48,25 @@ namespace TestplanPackageCounter.UglyCode
             return maxUeCount;
         }
 
+        private int CountMaxCaAmongPlatforms(string testName)
+        {
+            int maxCaCount = 0;
+
+            if (!this._packagesDictionary.ContainsKey(testName))
+            {
+                return maxCaCount;
+            }
+
+            foreach (TestPackagesData platformTestData in this._packagesDictionary[testName].Values)
+            {
+                int platformUePackages = platformTestData.CaPackagesCount;
+
+                maxCaCount = platformUePackages > maxCaCount ? platformUePackages : maxCaCount;
+            }
+
+            return maxCaCount;
+        }
+
         private readonly Dictionary<Platforms, List<string>> _patternsDictionary =
             new Dictionary<Platforms, List<string>>()
         {
@@ -71,7 +90,7 @@ namespace TestplanPackageCounter.UglyCode
             {
                 return testPackages.All(
                   e => (
-                      e.Value.PackagesCountWithoutUeAndAl
+                      e.Value.PackagesCountWithoutAlCaUe
                       + ueCount
                       + e.Value.AlPackagesCountWithoutIgnored
                   ) == defaultPackagesCount
@@ -82,7 +101,7 @@ namespace TestplanPackageCounter.UglyCode
             {
                 return testPackages.All(
                     e => (
-                        e.Value.PackagesCountWithoutUeAndAl
+                        e.Value.PackagesCountWithoutAlCaUe
                         + e.Value.UePackagesCountWithoutIgnored
                         + e.Value.AlPackagesCountWithoutIgnored
                     ) == defaultPackagesCount
@@ -95,7 +114,8 @@ namespace TestplanPackageCounter.UglyCode
         private int? GetPackagesCountFromResults(
             Dictionary<string, TestPackagesData> testPackagesByPlatform, 
             Platforms platform,
-            int maxUe
+            int maxUe,
+            int maxCa
         )
         {
             int maxCount = 0;
@@ -117,13 +137,27 @@ namespace TestplanPackageCounter.UglyCode
                     }
 
                     //TODO: here's some bug with 999 count!
+                    //TODO: ue count is correct?
 
                     int ueCount = this._counterSettings.CalculatePackagesWithMaxUe ? maxUe : testPackagesData.UePackagesCountWithoutIgnored;
-                    int packagesCountWithoutUeAndAl =
+                    int packagesCountWithoutUeAndAl = testPackagesData.PackagesCountWithoutIgnored;
+                        /*
                         this._counterSettings.IgnoreUserIdentificationPackages
                         ? testPackagesData.PackagesCountWithoutUeAndAl - testPackagesData.AttemptPackagesCount
                         : testPackagesData.PackagesCountWithoutUeAndAl;
+                        */
                     int platformCount = packagesCountWithoutUeAndAl + testPackagesData.AlPackagesCountWithoutIgnored + ueCount;
+
+                    if (!this._counterSettings.CalculatePackagesWithMaxUe)
+                    {
+                        platformCount = testPackagesData.PackagesCountWithoutIgnored;
+                    }
+
+                    //TODO: rework this, because maxUe and maxCa can fuck up all calculations
+                    if(this._counterSettings.CalculatePackagesWithMaxCa)
+                    {
+                        platformCount = testPackagesData.PackagesCountWithoutIgnored - testPackagesData.CaPackagesCount + maxCa;
+                    }
 
                     maxCount = platformCount != 999 && platformCount > maxCount ? platformCount : maxCount;
                 }
@@ -141,7 +175,8 @@ namespace TestplanPackageCounter.UglyCode
             Platforms platform,
             Dictionary<string, TestPackagesData> testPackagesByPlatform,
             ParamsNulls testData,
-            int ueCount
+            int ueCount,
+            int caCount
         )
         {
             if (!testPackagesByPlatform.Keys.Any(e => this.IsPlatformValid(this._patternsDictionary[platform], e)))
@@ -149,7 +184,7 @@ namespace TestplanPackageCounter.UglyCode
                 return null;
             }
 
-            return this.GetPackagesCountFromResults(testPackagesByPlatform, platform, ueCount) 
+            return this.GetPackagesCountFromResults(testPackagesByPlatform, platform, ueCount, caCount) 
                 ?? this.PackagesFromPlan(testData, platform);
         }
 
@@ -211,6 +246,7 @@ namespace TestplanPackageCounter.UglyCode
                     int? defaultPackagesCount = testData.DefaultPackagesCount;
 
                     int maxUeCount = this.CountMaxUeAmongPlatforms(fullTestname);
+                    int maxCaCount = this.CountMaxCaAmongPlatforms(fullTestname);
 
                     if (!existingResultTests.Any(e => e.Name.Equals(testName, StringComparison.OrdinalIgnoreCase)))
                     {
@@ -225,6 +261,7 @@ namespace TestplanPackageCounter.UglyCode
                         continue;
                     }
 
+                    //Reflexy me
                     if (this.IsAllPackagesCountsAreEqualsDefault(this._packagesDictionary[fullTestname], maxUeCount, defaultPackagesCount))
                     {
                         testData.DefaultPackagesCount = defaultPackagesCount;
@@ -239,19 +276,19 @@ namespace TestplanPackageCounter.UglyCode
                     PlatformPackagesCount platformPackages = new PlatformPackagesCount
                     {
                         AndroidPackages = this.GetPlatformPackagesCount(
-                            Platforms.Android, testDataByPlatform, testData, maxUeCount
+                            Platforms.Android, testDataByPlatform, testData, maxUeCount, maxCaCount
                         ),
                         IosPackages = this.GetPlatformPackagesCount(
-                            Platforms.IOS, testDataByPlatform, testData, maxUeCount
+                            Platforms.IOS, testDataByPlatform, testData, maxUeCount, maxCaCount
                         ),
                         MacOsPackages = this.GetPlatformPackagesCount(
-                            Platforms.MacOS, testDataByPlatform, testData, maxUeCount
+                            Platforms.MacOS, testDataByPlatform, testData, maxUeCount, maxCaCount
                         ),
                         UwpPackages = this.GetPlatformPackagesCount(
-                            Platforms.Uwp, testDataByPlatform, testData, maxUeCount
+                            Platforms.Uwp, testDataByPlatform, testData, maxUeCount, maxCaCount
                         ),
                         WindowsPackages = this.GetPlatformPackagesCount(
-                            Platforms.Windows, testDataByPlatform, testData, maxUeCount
+                            Platforms.Windows, testDataByPlatform, testData, maxUeCount, maxCaCount
                         ),
                     };
 
@@ -300,7 +337,7 @@ namespace TestplanPackageCounter.UglyCode
 
         private int FindMinPackagesCount(PlatformPackagesCount platformPackages)
         {
-            int minCount = int.MaxValue;
+            int minCount = 999;
 
             if (platformPackages.AndroidPackages < minCount && platformPackages.AndroidPackages != 0 && platformPackages.AndroidPackages != null)
             {

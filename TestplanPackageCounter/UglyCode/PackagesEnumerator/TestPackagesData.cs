@@ -10,11 +10,15 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
         internal int PackagesCount { get; }
 
-        internal int PackagesCountWithoutUeAndAl { get; }
+        internal int PackagesCountWithoutAlCaUe { get; }
+
+        internal int SdkVersionCount { get; }
 
         internal int UePackagesCount { get; }
 
         internal int AlPackagesCount { get; }
+
+        internal int CaPackagesCount { get; }
 
         internal bool IsLastUeEventRemoved { get; }
 
@@ -30,6 +34,8 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
         internal IEnumerable<string> Events { get; } = new List<string>();
 
+        internal int EventsCount { get; }
+
         internal int UePackagesCountWithoutIgnored { get; }
 
         internal int AlPackagesCountWithoutIgnored { get; }
@@ -42,18 +48,26 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
         internal bool ContainsZeroCodePackage { get; }
 
+        internal bool PreviousTestContainsCleaning { get; }
+
+        internal bool ContainsDeserializationErrors { get; }
+
         internal TestPackagesData(
             int originalPackagesCount,
             int packagesCount,
             int alPackagesCount,
             int uePackagesCount,
+            int caPackagesCount,
             int attemptPackagesCount,
+            int sdkVersionCount,
             List<string> events,
             IEnumerable<string> doublesSignatures,
             IEnumerable<ProxyPackageInfo> badCodesPackages,
             bool isLastAlRemoved,
             bool isLastUeRemoved,
             bool isAllEventsOrdered,
+            bool previousTestContainsCleaning,
+            bool containsDeserializationErrors,
             bool containsZeroCodePackage = false
         )
         {
@@ -61,6 +75,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             this.PackagesCount = packagesCount;
             this.AlPackagesCount = alPackagesCount;
             this.UePackagesCount = uePackagesCount;
+            this.CaPackagesCount = caPackagesCount;
             this.IsLastAlEventRemoved = isLastAlRemoved;
             this.IsLastUeEventRemoved = isLastUeRemoved;
             this.IsAllEventsOrdered = isAllEventsOrdered;
@@ -71,9 +86,10 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 this.IsLastAlEventRemoved ? this.AlPackagesCount - 1 : this.AlPackagesCount;
             this.UePackagesCountWithoutIgnored =
                 this.IsLastUeEventRemoved ? this.UePackagesCount - 1 : this.UePackagesCount;
-            this.PackagesCountWithoutUeAndAl =
-                this.PackagesCount - (this.AlPackagesCount + this.UePackagesCount);
+            this.PackagesCountWithoutAlCaUe =
+                this.PackagesCount - (this.AlPackagesCount + this.UePackagesCount + this.CaPackagesCount);
             this.AttemptPackagesCount = attemptPackagesCount;
+            this.SdkVersionCount = sdkVersionCount;
             this.IgnoredPackagesCount =
                 (this.IsLastAlEventRemoved ? 1 : 0)
                 + (this.IsLastUeEventRemoved ? 1 : 0)
@@ -81,21 +97,15 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 + this.AttemptPackagesCount
                 + this.BadCodesPackages.Count();
 
-            if (events != null)
-            {
-                if (this.IsLastAlEventRemoved)
-                {
-                    events.Remove("al");
-                }
-                if (this.IsLastUeEventRemoved)
-                {
-                    events.Remove("ue");
-                }
-                this.Events = events;
-            }
+            this.Events = events;
+
+            this.EventsCount = events.Where(e => !e.Contains("err") && !e.Contains("ign")).Count();
 
             this.PackagesCountWithoutIgnored = this.PackagesCount - this.IgnoredPackagesCount;
             this.ContainsZeroCodePackage = containsZeroCodePackage;
+
+            this.PreviousTestContainsCleaning = previousTestContainsCleaning;
+            this.ContainsDeserializationErrors = containsDeserializationErrors;
         }
 
         internal TestPackagesData()
@@ -113,7 +123,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 this.IsLastAlEventRemoved ? this.AlPackagesCount - 1 : this.AlPackagesCount;
             this.UePackagesCountWithoutIgnored =
                 this.IsLastUeEventRemoved ? this.UePackagesCount - 1 : this.UePackagesCount;
-            this.PackagesCountWithoutUeAndAl =
+            this.PackagesCountWithoutAlCaUe =
                 this.PackagesCount - (this.AlPackagesCount + this.UePackagesCount);
             this.AttemptPackagesCount = 0;
             this.IgnoredPackagesCount = 0;

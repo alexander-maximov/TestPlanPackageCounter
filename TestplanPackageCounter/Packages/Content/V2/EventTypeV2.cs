@@ -45,6 +45,18 @@ namespace TestplanPackageCounter.Packages.Content.V2
         /// </summary>
         Rp,
         /// <summary>
+        /// Subscription.
+        /// </summary>
+        Sbs,
+        /// <summary>
+        /// Subscription with product info.
+        /// </summary>
+        Sbsp,
+        /// <summary>
+        /// Subscription with restore transactions.
+        /// </summary>
+        Sbsr,
+        /// <summary>
         /// SocialConnect.
         /// </summary>
         Sc,

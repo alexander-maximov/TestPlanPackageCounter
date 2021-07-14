@@ -1,12 +1,11 @@
 ﻿using Newtonsoft.Json;
 using System.ComponentModel;
-using TestplanPackageCounter.General;
 using TestplanPackageCounter.Packages.Content.General;
 using TestplanPackageCounter.Packages.Content.V2.Analytics.Events.Entries;
 
 namespace TestplanPackageCounter.Packages.Content.V2.Analytics.Events
 {
-    public class TrV2 : AbstractSdkEventV2, IHasBasicValues, IHasTimestamp
+    public class TrV2 : AbstractSdkEventV2, IHasBasicValues, IHasTimestamp, IHasSessionID
     {
         [JsonProperty("level")]
         [DefaultValue(null)]

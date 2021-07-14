@@ -5,7 +5,7 @@
     using TestplanPackageCounter.General;
     using TestplanPackageCounter.Packages.Content.General;
 
-    public class DiEvent : AbstractSdkEvent, IHasTimestamp
+    public class DiEvent : AbstractSdkEventV1, IHasTimestamp
     {
         [JsonProperty("manufacturer")]
         [DefaultValue(Constants.NotExistsString)]

@@ -3,7 +3,7 @@
     using Newtonsoft.Json;
     using System.ComponentModel;
 
-    public class CeEntry : AbstractSdkEvent
+    public class CeEntry : AbstractSdkEventV1
     {
         [JsonProperty("t1")]
         [JsonRequired]

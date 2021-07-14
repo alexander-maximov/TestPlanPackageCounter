@@ -4,7 +4,7 @@ using TestplanPackageCounter.Packages.Content.V2;
 using TestplanPackageCounter.Packages.Content.V2.Analytics;
 using TestplanPackageCounter.Packages.Content.V2.Analytics.Events;
 
-namespace TestplanPackageCounter.General
+namespace TestplanPackageCounter.General.EventExtensions
 {
     public static class EventExtensionsV2
     {

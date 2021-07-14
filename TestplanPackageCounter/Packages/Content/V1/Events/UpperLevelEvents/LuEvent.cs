@@ -33,6 +33,6 @@
 
         [JsonProperty("events")]
         [DefaultValue(null)]
-        public Dictionary<EventType, AbstractSdkEvent[]> Events { get; private set; }
+        public Dictionary<EventType, AbstractSdkEventV1[]> Events { get; private set; }
     }
 }

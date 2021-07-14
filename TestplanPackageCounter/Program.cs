@@ -1,7 +1,9 @@
 ﻿namespace TestplanPackageCounter
 {
     using Newtonsoft.Json;
+    using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.IO;
     using TestplanPackageCounter.Counter;
     using TestplanPackageCounter.General;
@@ -14,15 +16,18 @@
     {
         static void Main(string[] args)
         {
+            Stopwatch watch = Stopwatch.StartNew();
+
             //TODO: pick default values from testplan option, otherwise 999
             //TODO: null packages removal for v2
             CounterSettings counterSettings = new CounterSettings(
-                pathToTestplan: @"C:\Users\at\Downloads\NewBigData\testplan.json",
-                outcomingPath: @"C:\Users\at\Downloads\NewBigData\testplan_edited_new_condition.json",
-                pathToResults: @"C:\Users\at\Downloads\NewBigData",
+                pathToTestplan: @"C:\Users\at\Downloads\AndroidAndIosOnly\testplan.json",
+                outcomingPath: @"C:\Users\at\Downloads\AndroidAndIosOnly\testplan_edited.json",
+                pathToResults: @"C:\Users\at\Downloads\AndroidAndIosOnly",
                 sdkVersion: SdkVersions.V2,
                 ignoreLastAl: true,
-                fillMissingTestPackagesCount: true
+                fillMissingTestPackagesCount: true,
+                calculateWithMaxUe: false
             );
 
             JsonSerializerSettings serializerSettings = new JsonSerializerSettings
@@ -49,18 +54,16 @@
 
                 return;
             }
-            
-            Dictionary<string, bool> testBeforeCleanDictionary = GetToKnowCleaningTest(testSuites);
 
             CommonEnumerator commonEnumerator;
 
             if (counterSettings.SdkVersion == SdkVersions.V1)
             {
-                commonEnumerator = new PackagesEnumeratorV1(counterSettings, testBeforeCleanDictionary, testSuites);
+                commonEnumerator = new PackagesEnumeratorV1(counterSettings, testSuites);
             }
             else
             {
-                commonEnumerator = new PackagesEnumeratorV2(counterSettings, testBeforeCleanDictionary, testSuites);
+                commonEnumerator = new PackagesEnumeratorV2(counterSettings, testSuites);
             }
 
             commonEnumerator.Enumerate();
@@ -84,72 +87,24 @@
             if (counterSettings.WriteToCsv)
             {
                 ReportGenerator reportGenerator = new ReportGenerator(
-                    counterSettings,
-                    commonEnumerator.PackagesStatusDictionary,
-                    GetPlatformList(counterSettings.PathToResults),
-                    commonEnumerator.TestsList,
-                    testSuites
+                    counterSettings: counterSettings,
+                    packagesDictionary: commonEnumerator.PackagesStatusDictionary,
+                    platformList: GetPlatformList(counterSettings.PathToResults),
+                    testSuites: testSuites
                 );
 
                 reportGenerator.WriteToCsv();
-                reportGenerator.WriteToEachPlatform();
                 reportGenerator.EasyTestplanReport();
                 reportGenerator.OverwhelmingOne();
             }
+
+            watch.Stop();
+
+            long elapsedMs = watch.ElapsedMilliseconds;
+            Console.WriteLine($"Elapsed time: {elapsedMs} ms");
         }
 
-        private static Dictionary<string, bool> GetToKnowCleaningTest(List<TestSuite> testSuites)
-        {
-            Dictionary<string, bool> previousTestIsCleanDictionary = new Dictionary<string, bool>();
-
-            bool aliveSuitePlug = true;
-
-            string previousTestSuiteName = string.Empty;
-            string previousTestName = string.Empty;
-
-            foreach (TestSuite testSuite in testSuites)
-            {
-                string testSuiteName = testSuite.Name.ToUpper();                
-
-                foreach (Test test in testSuite.Tests)
-                {
-                    string testName = test.Name.ToUpper();
-
-                    ParamsNulls testParams = (ParamsNulls)test.Params;
-
-                    bool testContainsCleaning = false;
-
-                    if (testParams != null)
-                    {
-                        testContainsCleaning = testParams.RestartMode == "BeforeTest"
-                        || testParams.CleaningMode == "BeforeTest";
-                    }
-
-                    if (!string.IsNullOrEmpty(previousTestName) 
-                        && !string.IsNullOrEmpty(previousTestSuiteName)
-                    )
-                    {
-                        string testEntryName = string.Concat(previousTestSuiteName, "_", previousTestName);
-
-                        previousTestIsCleanDictionary.Add(testEntryName, testContainsCleaning);
-                    }
-
-                    previousTestName = testName;
-                    previousTestSuiteName = testSuiteName;
-                }                
-            }
-
-            string finalTestEntryName = string.Concat(previousTestSuiteName, "_", previousTestName);
-
-            previousTestIsCleanDictionary.Add(finalTestEntryName, false);
-
-            if (aliveSuitePlug)
-            {
-                previousTestIsCleanDictionary["ALIVESUITE_ALIVEWITHTIMEOUT"] = aliveSuitePlug;
-            }
-
-            return previousTestIsCleanDictionary;
-        }
+        
 
         /// <summary>
         /// Get list of platforms from results.

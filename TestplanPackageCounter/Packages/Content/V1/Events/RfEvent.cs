@@ -6,7 +6,7 @@
     using TestplanPackageCounter.General;
     using TestplanPackageCounter.Packages.Content.General;
 
-    public class RfEvent : AbstractSdkEvent, IHasTimestamp
+    public class RfEvent : AbstractSdkEventV1, IHasTimestamp
     {
         [JsonProperty("timestamp")]
         [JsonRequired]

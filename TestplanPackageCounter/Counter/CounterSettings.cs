@@ -12,7 +12,7 @@
 
         internal bool RewriteTestplan { get; }
 
-        internal bool IgnoreLastUe { get; }
+        internal bool IgnoreBadUe { get; }
 
         internal bool IgnoreLastAl { get; }
 
@@ -21,6 +21,8 @@
         internal bool IgnoreBadCodePackages { get; }
 
         internal bool CalculatePackagesWithMaxUe { get; }
+
+        internal bool CalculatePackagesWithMaxCa { get; }
 
         internal bool FillWithDefaultParams { get; }
 
@@ -38,11 +40,12 @@
             string pathToResults,
             SdkVersions sdkVersion,
             bool rewriteTestplan = true,
-            bool ignoreLastUe = true,
+            bool ignoreBadUe = true,
             bool ignoreLastAl = false,
             bool ignoreUserIdentification = true,
             bool ignoreBadCodePackages = true,
             bool calculateWithMaxUe = true,
+            bool calculateWithMaxCa = true,
             bool fillWithDefaultParams = false,
             bool fillMissingTestPackagesCount = false,
             bool writeToCsv = true,
@@ -54,11 +57,12 @@
             this.PathToResults = pathToResults;
             this.SdkVersion = sdkVersion;
             this.RewriteTestplan = rewriteTestplan;
-            this.IgnoreLastUe = ignoreLastUe;
+            this.IgnoreBadUe = ignoreBadUe;
             this.IgnoreLastAl = ignoreLastAl;
             this.IgnoreUserIdentificationPackages = ignoreUserIdentification;
             this.IgnoreBadCodePackages = ignoreBadCodePackages;
             this.CalculatePackagesWithMaxUe = calculateWithMaxUe;
+            this.CalculatePackagesWithMaxCa = calculateWithMaxCa;
             this.FillWithDefaultParams = fillWithDefaultParams;
             this.FillMissingTestPackagesCount = fillMissingTestPackagesCount;
             this.WriteToCsv = writeToCsv;

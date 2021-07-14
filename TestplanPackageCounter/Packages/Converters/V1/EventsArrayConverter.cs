@@ -11,7 +11,7 @@
     public class EventsArrayConverter : JsonConverter
     {
         private readonly Type _eventsDictionaryType =
-            typeof(Dictionary<EventType, AbstractSdkEvent[]>);
+            typeof(Dictionary<EventType, AbstractSdkEventV1[]>);
 
         private readonly Type _eventType = typeof(EventType);
 
@@ -46,8 +46,8 @@
         {
             JObject eventsObject = JObject.Load(reader);
 
-            Dictionary<string, AbstractSdkEvent[]> unconvertedEventsDictionary =
-                new Dictionary<string, AbstractSdkEvent[]>();
+            Dictionary<string, AbstractSdkEventV1[]> unconvertedEventsDictionary =
+                new Dictionary<string, AbstractSdkEventV1[]>();
 
             foreach (JProperty property in eventsObject.Properties())
             {
@@ -57,7 +57,7 @@
                 JToken eventValue = property.Value;
                 JArray eventObject = JArray.Load(eventValue.CreateReader());
 
-                AbstractSdkEvent[] eventsArray = (AbstractSdkEvent[])serializer.Deserialize(
+                AbstractSdkEventV1[] eventsArray = (AbstractSdkEventV1[])serializer.Deserialize(
                     eventObject.CreateReader(),
                     this._arrayTypeMap[eventType]
                 );
@@ -66,7 +66,7 @@
             }
 
             //Convert to enum. Easier to catch syncax mistake in case of event code mismatch
-            Dictionary<EventType, AbstractSdkEvent[]> eventsDictionary =
+            Dictionary<EventType, AbstractSdkEventV1[]> eventsDictionary =
                 unconvertedEventsDictionary.ToDictionary(
                     item => (EventType)Enum.Parse(typeof(EventType), item.Key, true),
                     item => item.Value

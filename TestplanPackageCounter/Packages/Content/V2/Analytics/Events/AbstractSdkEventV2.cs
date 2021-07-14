@@ -5,7 +5,7 @@ using TestplanPackageCounter.Packages.Content.General;
 
 namespace TestplanPackageCounter.Packages.Content.V2.Analytics.Events
 {
-    public abstract class AbstractSdkEventV2 : AbstractData
+    public abstract class AbstractSdkEventV2 : AbstractSdkEvent
     {
         [JsonProperty("inProgress")]
         [DefaultValue(null)]

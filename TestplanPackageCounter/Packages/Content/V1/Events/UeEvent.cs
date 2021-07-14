@@ -3,7 +3,7 @@
     using Newtonsoft.Json;
     using TestplanPackageCounter.Packages.Content.General;
 
-    public class UeEvent : AbstractSdkEvent, IHasTimestamp
+    public class UeEvent : AbstractSdkEventV1, IHasTimestamp
     {
         [JsonProperty("timestamp")]
         [JsonRequired]

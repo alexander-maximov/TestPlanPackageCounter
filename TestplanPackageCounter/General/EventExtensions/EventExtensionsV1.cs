@@ -1,4 +1,4 @@
-﻿namespace TestplanPackageCounter.General
+﻿namespace TestplanPackageCounter.General.EventExtensions
 {
     using System.Collections.Generic;
     using System.Linq;
@@ -49,11 +49,11 @@
         }
 
         public static ProxyPackageInfoV1 FindPackageForSubEvent(
-            this AbstractSdkEvent desiredEvent,
+            this AbstractSdkEventV1 desiredEvent,
             IEnumerable<ProxyPackageInfoV1> packages
         )
         {
-            Dictionary<EventType, AbstractSdkEvent[]> subEventPack = 
+            Dictionary<EventType, AbstractSdkEventV1[]> subEventPack = 
                 packages.GetAllLuEvents().GetAllLevelSubevents().FindSubeventPackForEvent(desiredEvent);
             Dictionary<int, LuEvent> luEvent = packages.GetAllLuEvents().FindLuEventForEventsPack(subEventPack);
 
@@ -69,7 +69,7 @@
         /// <returns>LuEvent contains desired value or null if unable to find.</returns>
         public static Dictionary<int, LuEvent> FindLuEventForEventsPack(
             this IEnumerable<Dictionary<int, LuEvent>> luEventList,
-            Dictionary<EventType, AbstractSdkEvent[]> desiredLevelSubevents,
+            Dictionary<EventType, AbstractSdkEventV1[]> desiredLevelSubevents,
             bool isLuEventContainsOnlyDesiredPack = true
         )
         {
@@ -105,9 +105,9 @@
         /// <param name="desiredEvent">Desired value.</param>
         /// <param name="isPackContainsOnlyDesiredEvent">Condition to find level subevent with only desired value.</param>
         /// <returns>Level subevent contains desired value or null if unable to find.</returns>
-        public static Dictionary<EventType, AbstractSdkEvent[]> FindSubeventPackForEvent(
-            this IEnumerable<Dictionary<EventType, AbstractSdkEvent[]>> levelSubevents,
-            AbstractSdkEvent desiredEvent,
+        public static Dictionary<EventType, AbstractSdkEventV1[]> FindSubeventPackForEvent(
+            this IEnumerable<Dictionary<EventType, AbstractSdkEventV1[]>> levelSubevents,
+            AbstractSdkEventV1 desiredEvent,
             bool isPackContainsOnlyDesiredEvent = true
         )
         {
@@ -116,13 +116,13 @@
                 return null;
             }
 
-            foreach (Dictionary<EventType, AbstractSdkEvent[]> packedSubevent in levelSubevents)
+            foreach (Dictionary<EventType, AbstractSdkEventV1[]> packedSubevent in levelSubevents)
             {
                 if (packedSubevent == null)
                 {
                     continue;
                 }
-                foreach (AbstractSdkEvent[] unpackedEventsArray in packedSubevent.Values)
+                foreach (AbstractSdkEventV1[] unpackedEventsArray in packedSubevent.Values)
                 {
                     bool searchCondition = isPackContainsOnlyDesiredEvent
                         ? (unpackedEventsArray.Contains(desiredEvent) && unpackedEventsArray.Length == 1)
@@ -143,11 +143,11 @@
         /// </summary>
         /// <param name="levelSubevents">level subevents to extract subevents content.</param>
         /// <returns>List contains subevents content.</returns>
-        public static IEnumerable<AbstractSdkEvent> GetAllSubevents(
-            this IEnumerable<Dictionary<EventType, AbstractSdkEvent[]>> levelSubevents
+        public static IEnumerable<AbstractSdkEventV1> GetAllSubevents(
+            this IEnumerable<Dictionary<EventType, AbstractSdkEventV1[]>> levelSubevents
         )
         {
-            List<AbstractSdkEvent> subEventsList = new List<AbstractSdkEvent>();
+            List<AbstractSdkEventV1> subEventsList = new List<AbstractSdkEventV1>();
 
             foreach (var packedSubEvents in levelSubevents)
             {
@@ -173,7 +173,7 @@
         /// </summary>
         /// <param name="luEventList">LuEvents to extract subevents.</param>
         /// <returns>List of subevents.</returns>
-        public static IEnumerable<Dictionary<EventType, AbstractSdkEvent[]>> GetAllLevelSubevents(
+        public static IEnumerable<Dictionary<EventType, AbstractSdkEventV1[]>> GetAllLevelSubevents(
             this IEnumerable<Dictionary<int, LuEvent>> luEventList
         ) => 
             from luEvent in luEventList

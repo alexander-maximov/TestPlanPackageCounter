@@ -5,12 +5,12 @@
     using Newtonsoft.Json;
     using TestplanPackageCounter.Packages.Content.General;
 
-    public abstract class AbstractSdkEvent : AbstractData
+    public abstract class AbstractSdkEventV1 : AbstractSdkEvent
     {
         [JsonIgnore]
         public bool Validated { get; set; }
 
-        public virtual IEnumerable<AbstractSdkEvent> ToPlain()
+        public virtual IEnumerable<AbstractSdkEventV1> ToPlain()
         {
             yield return this;
         }

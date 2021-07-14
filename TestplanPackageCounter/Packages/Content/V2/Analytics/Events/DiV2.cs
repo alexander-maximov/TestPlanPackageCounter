@@ -81,5 +81,9 @@ namespace TestplanPackageCounter.Packages.Content.V2.Analytics.Events
         [JsonProperty("timestamp")]
         [DefaultValue(null)]
         public ulong? Timestamp { get; private set; }
+
+        [JsonProperty("isSandbox")]
+        [DefaultValue(Constants.NotExistsString)]
+        public string IsSandbox { get; private set; }
     }
 }

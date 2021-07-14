@@ -12,13 +12,17 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 {
     internal abstract class CommonEnumerator
     {
-        protected CounterSettings _counterSettings;
+        protected Dictionary<string, List<string>> catchDeserializationErrorTests = new Dictionary<string, List<string>>();
 
-        protected List<string> _platformList = new List<string>();
+        protected CounterSettings counterSettings;
 
-        protected Dictionary<string, bool> _testBeforeCleanDictionary = new Dictionary<string, bool>();
+        protected List<string> platformList = new List<string>();
+
+        protected Dictionary<string, bool> testBeforeCleanDictionary = new Dictionary<string, bool>();
 
         protected List<TestSuite> testSuites = new List<TestSuite>();
+
+        protected Dictionary<string, List<(string, bool)>> platformCompletedTestSequenceList = new Dictionary<string, List<(string, bool)>>();
 
         internal Dictionary<string, Dictionary<string, TestPackagesData>> PackagesStatusDictionary { get; set; }
 
@@ -27,6 +31,87 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
         internal Dictionary<string, List<string>> TestsList { get; set; }
 
         internal virtual void Enumerate() { }
+
+        protected bool IsPreviousTestContainsCleaning(string fullTestName, LinkedList<string> testsSequense)
+        {
+            if (fullTestName == testsSequense.First())
+            {
+                return true;
+            }
+
+            string previousTestFullName = testsSequense.Find(fullTestName).Previous.Value;
+
+            string testSuiteName = previousTestFullName.Substring(0, previousTestFullName.IndexOf("_"));
+            string testName = previousTestFullName.Replace(testSuiteName, "").Substring(1);
+
+            ParamsNulls testParams = (ParamsNulls)(
+                                        from testSuite in this.testSuites
+                                        where testSuite.Name.Equals(testSuiteName, StringComparison.OrdinalIgnoreCase)
+                                        from test in testSuite.Tests
+                                        where test.Name.Equals(testName, StringComparison.OrdinalIgnoreCase)
+                                        select test.Params
+                                    ).FirstOrDefault();
+
+            if (testParams != null)
+            {
+                return testParams.RestartMode == "BeforeTest" || testParams.CleaningMode == "BeforeTest";
+            }
+
+            return false;
+        }
+
+        protected Dictionary<string, bool> GetToKnowCleaningTest()
+        {
+            Dictionary<string, bool> previousTestIsCleanDictionary = new Dictionary<string, bool>();
+
+            bool firstTestPlug = true;
+
+            string previousTestSuiteName = string.Empty;
+            string previousTestName = string.Empty;
+
+            foreach (TestSuite testSuite in this.testSuites)
+            {
+                string testSuiteName = testSuite.Name.ToUpper();
+
+                foreach (Test test in testSuite.Tests)
+                {
+                    string testName = test.Name.ToUpper();
+
+                    ParamsNulls testParams = (ParamsNulls)test.Params;
+
+                    bool testContainsCleaning = false;
+
+                    if (testParams != null)
+                    {
+                        testContainsCleaning = testParams.RestartMode == "BeforeTest"
+                        || testParams.CleaningMode == "BeforeTest";
+                    }
+
+                    if (!string.IsNullOrEmpty(previousTestName)
+                        && !string.IsNullOrEmpty(previousTestSuiteName)
+                    )
+                    {
+                        string testEntryName = string.Concat(previousTestSuiteName, "_", previousTestName);
+
+                        previousTestIsCleanDictionary.Add(testEntryName, testContainsCleaning);
+                    }
+
+                    previousTestName = testName;
+                    previousTestSuiteName = testSuiteName;
+                }
+            }
+
+            string finalTestEntryName = string.Concat(previousTestSuiteName, "_", previousTestName);
+
+            previousTestIsCleanDictionary.Add(finalTestEntryName, false);
+
+            if (firstTestPlug)
+            {
+                previousTestIsCleanDictionary["ALIVESUITE_ALIVEWITHTIMEOUT"] = firstTestPlug;
+            }
+
+            return previousTestIsCleanDictionary;
+        }
 
         /// <summary>
         /// Get list of platforms from results.

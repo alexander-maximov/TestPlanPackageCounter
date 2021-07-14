@@ -5,7 +5,7 @@
     using TestplanPackageCounter.General;
     using TestplanPackageCounter.Packages.Content.General;
 
-    public class AiEvent : AbstractSdkEvent, IHasTimestamp
+    public class AiEvent : AbstractSdkEventV1, IHasTimestamp
     {
         [JsonProperty("timestamp")]
         [JsonRequired]

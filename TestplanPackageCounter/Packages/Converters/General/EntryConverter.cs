@@ -23,7 +23,14 @@
 
             object runtimeObject = Activator.CreateInstance(this.GetRuntimeType(jsonObject, objectType));
 
-            serializer.Populate(jsonObject.CreateReader(), runtimeObject);
+            try
+            {
+                serializer.Populate(jsonObject.CreateReader(), runtimeObject);
+            }
+            catch(Exception e)
+            {
+                throw e;
+            }
 
             return runtimeObject;
         }

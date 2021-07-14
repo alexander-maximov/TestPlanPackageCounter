@@ -8,7 +8,7 @@
     using System.Runtime.Serialization;
     using TestplanPackageCounter.Packages.Content.General;
 
-    public class PeEvent : AbstractSdkEvent, IHasTimestamp
+    public class PeEvent : AbstractSdkEventV1, IHasTimestamp
     {
         [JsonProperty("timestamp")]
         [JsonRequired]

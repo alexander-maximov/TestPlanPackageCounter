@@ -7,7 +7,7 @@ using TestplanPackageCounter.Packages.Content.V2.Analytics.Events.Entries;
 
 namespace TestplanPackageCounter.Packages.Content.V2.Analytics.Events
 {
-    public class PeV2 : AbstractSdkEventV2, IHasBasicValues, IHasTimestamp
+    public class PeV2 : AbstractSdkEventV2, IHasBasicValues, IHasTimestamp, IHasSessionID
     {
         [JsonProperty("level")]
         [DefaultValue(null)]

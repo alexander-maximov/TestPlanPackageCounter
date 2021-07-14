@@ -31,6 +31,10 @@
         [DefaultValue(null)]
         public Dictionary<string, string[]> ResponseContentHeaders { get; private set; }
 
+        [JsonProperty("Timestamp")]
+        [DefaultValue(null)]
+        public ulong? Timestamp { get; private set; }
+
         [JsonProperty("TestName")]
         [DefaultValue(Constants.NotExistsString)]
         public string TestName { get; private set; }

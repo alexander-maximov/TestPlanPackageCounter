@@ -3,7 +3,7 @@
     using Newtonsoft.Json;
     using TestplanPackageCounter.Packages.Content.V1.Events.Entries;
 
-    public class CeEvent : AbstractSdkEvent
+    public class CeEvent : AbstractSdkEventV1
     {
         [JsonProperty("name")]
         [JsonRequired]

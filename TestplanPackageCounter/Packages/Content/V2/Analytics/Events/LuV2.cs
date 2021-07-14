@@ -1,13 +1,12 @@
 ﻿using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.ComponentModel;
-using TestplanPackageCounter.General;
 using TestplanPackageCounter.Packages.Content.General;
 using TestplanPackageCounter.Packages.Content.V2.Analytics.Events.Entries;
 
 namespace TestplanPackageCounter.Packages.Content.V2.Analytics.Events
 {
-    public class LuV2 : AbstractSdkEventV2, IHasBasicValues, IHasTimestamp
+    public class LuV2 : AbstractSdkEventV2, IHasBasicValues, IHasTimestamp, IHasSessionID
     {
         [JsonProperty("timestamp")]
         [DefaultValue(null)]
