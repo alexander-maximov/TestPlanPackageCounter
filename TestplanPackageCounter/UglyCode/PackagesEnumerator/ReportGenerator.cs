@@ -42,22 +42,18 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             foreach (KeyValuePair<string, Dictionary<string, TestPackagesData>> packageData in this._packagesDictionary)
             {
                 string testName = packageData.Key;
-
-                if (packageData.Key.Equals("APPLICATIONINFOSUITE_RESTARTAFTERSETANOTHERPROJECT", StringComparison.OrdinalIgnoreCase))
-                {
-                    int j = 9;
-                }
+                bool breakCircle = false;
 
                 if (this.CompareEventCodes(packageData.Value))
                 {
                     i++;
                     Console.Write($"\rEquals tests count: {i}");
-                    continue;
+                    breakCircle = true;
                 }
 
                 foreach (var platformPackageData in packageData.Value)
                 {
-                    string platformName = platformPackageData.Key.Replace("TestResults_", "");
+                    string platformName = breakCircle ? "All" : platformPackageData.Key.Replace("TestResults_", "");
 
                     TestPackagesData testPackagesData = platformPackageData.Value;
 
@@ -71,6 +67,17 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                     
                     this._GeneratePackagesData(csvContent, testPackagesData);
 
+                    csvContent.AppendLine();
+
+                    if (breakCircle)
+                    {
+                        breakCircle = false;
+                        break;
+                    }
+                }
+
+                if (!packageData.Value.All(e => e.Value.PackagesCountWithoutIgnored == 999))
+                {
                     csvContent.AppendLine();
                 }
             }
