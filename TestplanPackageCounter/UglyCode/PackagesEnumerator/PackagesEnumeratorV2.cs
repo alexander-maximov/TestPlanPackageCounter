@@ -21,19 +21,16 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 {
     internal class PackagesEnumeratorV2 : CommonEnumerator
     {
-        private Dictionary<string,LinkedList<ProxyPackageInfoV2>> _linkedPackages =
-            new Dictionary<string, LinkedList<ProxyPackageInfoV2>>();
+        private Dictionary<string,LinkedList<ProxyPackageInfoV2>> _linkedPackages = new();
 
-        private Dictionary<string, Dictionary<string, List<ProxyPackageInfoV2>>> _deserializedPackages =
-                new Dictionary<string, Dictionary<string, List<ProxyPackageInfoV2>>>();
+        private Dictionary<string, Dictionary<string, List<ProxyPackageInfoV2>>> _deserializedPackages = new();
 
-        private List<ProxyPackageInfoV2> _previousTestPackages = new List<ProxyPackageInfoV2>();
+        private List<ProxyPackageInfoV2> _previousTestPackages = new();
 
-        internal PackagesEnumeratorV2(CounterSettings counterSettings, List<TestSuite> testSuites)
+        internal PackagesEnumeratorV2(List<TestSuite> testSuites)
         {
-            this.counterSettings = counterSettings;
             this.MaxUeDictionary = new Dictionary<string, int>();
-            this.platformList = this.GetPlatformList(counterSettings.PathToResults);            
+            this.platformList = this.GetPlatformList(CounterSettings.PathToResults);            
             this.PackagesStatusDictionary = new Dictionary<string, Dictionary<string, TestPackagesData>>();
             this.testSuites = testSuites;
         }
@@ -41,20 +38,20 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
         internal override void Enumerate()
         {            
             this.TestsList = this.GetTestList();
-            this._DeserializeAllPackagesV2();
+            this.DeserializeAllPackagesV2();
             this.testBeforeCleanDictionary = this.GetToKnowCleaningTest();
-            this._EnumeratePackagesV2();
+            this.EnumeratePackagesV2();
             this.PackagesStatusDictionary = this.ConvertPackageDictionary(PackagesStatusDictionary);            
         }
 
         /// <summary>
         /// Deserialize all result packages and dictionary with packages data.
         /// </summary>
-        private void _DeserializeAllPackagesV2()
+        private void DeserializeAllPackagesV2()
         {
             Console.WriteLine("Packages deserialization started..");
 
-            JsonSerializerSettings packageSerializationSettings = new JsonSerializerSettings
+            JsonSerializerSettings packageSerializationSettings = new()
             {
                 CheckAdditionalContent = true,
                 MissingMemberHandling = MissingMemberHandling.Error,
@@ -71,7 +68,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             packageSerializationSettings.Converters.Add(new RequestJsonConverterV2());
             packageSerializationSettings.Converters.Add(new ResponseJsonConverter());
 
-            foreach (string directory in Directory.GetDirectories(this.counterSettings.PathToResults))
+            foreach (string directory in Directory.GetDirectories(CounterSettings.PathToResults))
             {
                 string platformName = Path.GetFileName(directory);
 
@@ -82,7 +79,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                     continue;
                 }
 
-                LinkedList<string> testsSequence = new LinkedList<string>(
+                LinkedList<string> testsSequence = new(
                     File.ReadAllLines(Path.Combine(directory, "testplan.list")).Select(
                         e => e.Replace(".", "_").Replace("ANDRETURNERROR:", "")
                     )
@@ -110,13 +107,34 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                     string testName = Path.GetFileName(subDirectory);
 
                     this._deserializedPackages[platformName].Add(testName, new List<ProxyPackageInfoV2>());
+                    IEnumerable<string> jsonFiles = new List<string>();
 
-                    IEnumerable<string> jsonFiles = 
-                        Directory.GetFiles(subDirectory, "*.json").OrderBy(e => Path.GetFileName(e));
+                    try
+                    {
+                        jsonFiles =
+                            Directory.GetFiles(subDirectory, "*.json", SearchOption.TopDirectoryOnly).OrderBy(e => Path.GetFileName(e));
+                    }
+                    catch
+                    {
+                        Console.WriteLine($"\nUnable to get files from {subDirectory}" +
+                            $"\nToo long path, perhaps");
+                        break;
+                    }
 
                     foreach (string jsonFile in jsonFiles)
                     {
-                        string packageContent = File.ReadAllText(jsonFile, Encoding.UTF8);
+                        string packageContent;
+
+                        try
+                        {
+                            packageContent = File.ReadAllText(jsonFile, Encoding.UTF8);
+                        }
+                        catch
+                        {
+                            Console.WriteLine($"\nUnable to read {jsonFile}" +
+                                $"\nToo long path, perhaps");
+                            break;
+                        }
 
                         try
                         {
@@ -125,7 +143,12 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                                 packageContent,
                                 packageSerializationSettings
                             );
-
+                            /*
+                            if (deserializedJsonV2.RequestJson == null)
+                            {
+                                continue;
+                            }
+                            */
                             this._deserializedPackages[platformName][testName].Add(deserializedJsonV2);
                         }
                         catch(Exception e)
@@ -180,12 +203,17 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                     List<ProxyPackageInfoV2> completedPackages = completedTestsPackages[potentialKey].OrderBy(e => e.Timestamp).ToList();
 
                     foreach (ProxyPackageInfoV2 completedPackage in completedPackages)
-                    {
+                    {/*
                         if (completedPackage.Timestamp == null && completedPackage.ResponseCode != 0 && completedPackage.ResponseCode != 404)
                         {
                             continue;
                         }
 
+                        if (completedPackage.ResponseJson == null)
+                        {
+                            continue;
+                        }
+                        */
                         this._linkedPackages[platform].AddLast(completedPackage);
                     }
                 }
@@ -196,7 +224,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
         /// Calculates packages in given result folder.
         /// </summary>
         /// <returns>Platform separated dictionary of dictionary of test and packages.</returns>
-        private void _EnumeratePackagesV2()
+        private void EnumeratePackagesV2()
         {
             Console.WriteLine("Packages enumeration started..");
 
@@ -229,7 +257,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                     List<ProxyPackageInfoV2> packagesList = 
                         platformPackages.FirstOrDefault(e => e.Key.Equals(testName, StringComparison.OrdinalIgnoreCase)).Value;
 
-                    this.PackagesStatusDictionary[platformName][testName] = this._CalculatePackages(packagesList, testName, platformName);
+                    this.PackagesStatusDictionary[platformName][testName] = this.CalculatePackages(packagesList, testName, platformName);
 
                     Console.Write($"\r({++counter}/{platformPackagesCount}) enumerated. ({skipCounter}/{this.TestsList.Count}) tests wasn't in results folder.");                    
                 }
@@ -243,9 +271,9 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             }
         }
 
-        private IEnumerable<ProxyPackageInfoV2> _FindAllPackagesOfEvent<T>(IEnumerable<ProxyPackageInfoV2> testPackages)
+        private IEnumerable<ProxyPackageInfoV2> FindAllPackagesOfEvent<T>(IEnumerable<ProxyPackageInfoV2> testPackages)
         {
-            List<ProxyPackageInfoV2> packagesWithDesiredEventType = new List<ProxyPackageInfoV2>();
+            List<ProxyPackageInfoV2> packagesWithDesiredEventType = new();
 
             IEnumerable<T> desiredTypeEvents = testPackages.AllEventsOfType<T>();
 
@@ -260,31 +288,27 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             return packagesWithDesiredEventType.Distinct();
         }
 
-        private TestPackagesData _CalculatePackages(
-            List<ProxyPackageInfoV2> testPackagesOriginal,
+        private TestPackagesData CalculatePackages(
+            List<ProxyPackageInfoV2> testPackages,
             string testName,
             string platformName
         )
         {
-            List<ProxyPackageInfoV2> testPackages =
-                this._GetTestPackagesWithoutDoubles(new List<ProxyPackageInfoV2>(testPackagesOriginal));
+            this._previousTestPackages = new List<ProxyPackageInfoV2>(testPackages);
 
-            this._previousTestPackages = new List<ProxyPackageInfoV2>(testPackagesOriginal);
+            IEnumerable<string> doublesSignatures = this.PackagesDoubleCheck(testPackages, testPackages);
+            IEnumerable<ProxyPackageInfoV2> alContainingPackages = this.FindAllPackagesOfEvent<AlV2>(testPackages);
+            IEnumerable<ProxyPackageInfoV2> ueContainingPackages = this.FindAllPackagesOfEvent<UeV2>(testPackages);
+            IEnumerable<ProxyPackageInfoV2> caContainingPackages = this.FindAllPackagesOfEvent<CaV2>(testPackages);
 
-            IEnumerable<string> doublesSignatures = this.PackagesDoubleCheck(testPackages, testPackagesOriginal);
-            IEnumerable<ProxyPackageInfoV2> alContainingPackages = this._FindAllPackagesOfEvent<AlV2>(testPackages);
-            IEnumerable<ProxyPackageInfoV2> ueContainingPackages = this._FindAllPackagesOfEvent<UeV2>(testPackages);
-            IEnumerable<ProxyPackageInfoV2> caContainingPackages = this._FindAllPackagesOfEvent<CaV2>(testPackages);
+            ProxyPackageInfoV2 packageWithFirstUeEvent = this.GetJumpedEventFromPreviousTestOfType<UeV2>(testPackages, platformName);
+            ProxyPackageInfoV2 packageWithLastAlEvent = this.GetPackageWithLastEventOfType<AlV2, UeV2>(testPackages);
+            ProxyPackageInfoV2 packageWithLastUeEvent = this.GetPackageWithLastEventOfType<UeV2, AlV2>(testPackages);
 
-
-            ProxyPackageInfoV2 packageWithFirstUeEvent = this._GetJumpedEventFromPreviousTestOfType<UeV2>(testPackages, platformName);
-            ProxyPackageInfoV2 packageWithLastAlEvent = this._GetPackageWithLastEventOfType<AlV2, UeV2>(testPackages);
-            ProxyPackageInfoV2 packageWithLastUeEvent = this._GetPackageWithLastEventOfType<UeV2, AlV2>(testPackages);
-
-            List<ProxyPackageInfoV2> badCodePackages = new List<ProxyPackageInfoV2>();
+            List<ProxyPackageInfoV2> badCodePackages = new();
             bool containsZeroResponseCode = false;
 
-            if (this.counterSettings.IgnoreBadCodePackages)
+            if (CounterSettings.IgnoreBadCodePackages)
             {
                 foreach (ProxyPackageInfoV2 testPackage in testPackages.Where(e => e.ResponseCode == 0 || e.ResponseCode == 404).ToList())
                 {
@@ -300,9 +324,9 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             }
 
             bool previousTestContainsClean = this.platformCompletedTestSequenceList.Any(e => e.Key.Equals(platformName, StringComparison.OrdinalIgnoreCase) &&
-                e.Value.Any(x => x.Item1.Equals(testName, StringComparison.OrdinalIgnoreCase))) ? this.platformCompletedTestSequenceList[platformName].Find(e => e.Item1.Equals(testName, StringComparison.OrdinalIgnoreCase)).Item2 : false;
+                e.Value.Any(x => x.Item1.Equals(testName, StringComparison.OrdinalIgnoreCase))) && this.platformCompletedTestSequenceList[platformName].Find(e => e.Item1.Equals(testName, StringComparison.OrdinalIgnoreCase)).Item2;
 
-            if (previousTestContainsClean && (this.counterSettings.IgnoreLastAl || this.counterSettings.IgnoreBadUe))
+            if (previousTestContainsClean && (CounterSettings.IgnoreLastAl || CounterSettings.IgnoreBadUe))
             {
                 testPackages.Remove(packageWithLastUeEvent);
                 testPackages.Remove(packageWithLastAlEvent);
@@ -314,28 +338,34 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             IEnumerable<ProxyPackageInfoV2> sdkVersionPackages = 
                 new List<ProxyPackageInfoV2>(testPackages.Where(e => e.RequestJson is SdkVersionRequest));
 
+            /*
             foreach (ProxyPackageInfoV2 attemptPackage in attemptPackages)
             {
                 testPackages.Remove(attemptPackage);
             }
+            */
 
-            List<string> eventCodes = new List<string>();
+            List<string> eventCodes = new();
 
-            if (previousTestContainsClean && (this.counterSettings.IgnoreLastAl || this.counterSettings.IgnoreBadUe))
+            int index = 1;
+
+            if (previousTestContainsClean && (CounterSettings.IgnoreLastAl || CounterSettings.IgnoreBadUe))
             {
                 if (packageWithFirstUeEvent != null)
                 {
-                    testPackages.Add(packageWithFirstUeEvent);
-
                     foreach (AbstractSdkEventV2 abstractSdkEvent in packageWithFirstUeEvent.AllEvents())
                     {
+                        //If ignored - don't print.
+                        /*
                         eventCodes.Add($"(first){abstractSdkEvent.Code}");
+                        index++;
+                        */
                     }
                 }
             }
 
-            int index = 1;
-
+            /*
+             * It was here at the beginning
             foreach (ProxyPackageInfoV2 testPackage in testPackages.Where(e => e.RequestJson is AnalyticsRequest).OrderBy(e => e.Timestamp))
             {
                 foreach (AbstractSdkEventV2 abstractSdkEvent in testPackage.AllEvents().OrderBy(e => e.Code))
@@ -345,28 +375,48 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                 index++;
             }
-
-            foreach (ProxyPackageInfoV2 attemptPackage in attemptPackages)
-            {
-                testPackages.Add(attemptPackage);
-
-                foreach (AbstractSdkEventV2 abstractSdkEvent in attemptPackage.AllEvents())
-                {
-                    eventCodes.Add($"(ign){abstractSdkEvent.Code}");
-                }
-            }
+            */
 
             foreach (ProxyPackageInfoV2 badCodePackage in badCodePackages)
             {
                 testPackages.Add(badCodePackage);
-
-                foreach (AbstractSdkEventV2 abstractSdkEvent in badCodePackage.AllEvents())
-                {
-                    eventCodes.Add($"(err){abstractSdkEvent.Code}");
-                }
             }
 
-            if (previousTestContainsClean && (this.counterSettings.IgnoreLastAl || this.counterSettings.IgnoreBadUe))
+            foreach (ProxyPackageInfoV2 testPackage in testPackages.Where(e => e.RequestJson is AnalyticsRequest or null).OrderBy(e => e.Timestamp))
+            {
+                int? responseCode = testPackage.ResponseCode;
+                string requestUrl = testPackage.RequestUrl;
+
+                if (requestUrl == null)
+                {
+                    eventCodes.Add($"[(#{index})NullPackage(Code:{responseCode})]");
+                    index++;
+                    continue;
+                }
+
+                if (testPackage.RequestJson == null && !requestUrl.Contains("config") && !requestUrl.Contains("identification"))
+                {
+                    eventCodes.Add($"[(#{index})NullRequest(Code:{responseCode})]");
+                    index++;
+                    continue;
+                }
+
+                foreach (AbstractSdkEventV2 abstractSdkEvent in testPackage.AllEvents())
+                {
+                    if (abstractSdkEvent is IHasTimestamp timestampEvent)
+                    {
+                        var timestamp = timestampEvent.Timestamp;
+                        eventCodes.Add($"[(#{index}){abstractSdkEvent.Code}:(Code:{responseCode})]({timestamp})");
+                        continue;
+                    }
+
+                    eventCodes.Add($"[(#{index}){abstractSdkEvent.Code}:(Code:{responseCode})]");
+                }
+
+                index++;
+            }
+
+            if (previousTestContainsClean && (CounterSettings.IgnoreLastAl || CounterSettings.IgnoreBadUe))
             {
                 if (packageWithLastUeEvent != null)
                 {
@@ -374,7 +424,8 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                     foreach (AbstractSdkEventV2 abstractSdkEvent in packageWithLastUeEvent.AllEvents())
                     {
-                        eventCodes.Add($"(last){abstractSdkEvent.Code}");
+                        //If ignored - don't print.
+                        //eventCodes.Add($"(last){abstractSdkEvent.Code}");
                     }
                 }
 
@@ -384,8 +435,14 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                     foreach (AbstractSdkEventV2 abstractSdkEvent in packageWithLastAlEvent.AllEvents())
                     {
-                        eventCodes.Add($"(last){abstractSdkEvent.Code}");
+                        //If ignored - don't print.
+                        //eventCodes.Add($"(last){abstractSdkEvent.Code}");
                     }
+                }
+
+                if (packageWithFirstUeEvent != null)
+                {
+                    testPackages.Add(packageWithFirstUeEvent);
                 }
             }
 
@@ -393,17 +450,18 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             bool containsDeserializationErrors = this.catchDeserializationErrorTests.Any(e => e.Key.Equals(platformName, StringComparison.OrdinalIgnoreCase) &&
                 e.Value.Any(x => x.Equals(testName, StringComparison.OrdinalIgnoreCase)));
 
-            TestPackagesData testPackagesData = new TestPackagesData(
-                originalPackagesCount: testPackagesOriginal.Count,
+            TestPackagesData testPackagesData = new(
+                originalPackagesCount: testPackages.Count,
                 packagesCount: testPackages.Count,
                 alPackagesCount: alContainingPackages.Count(),
                 uePackagesCount: ueContainingPackages.Count(),
                 caPackagesCount: caContainingPackages.Count(),
                 attemptPackagesCount: attemptPackages.Count(),
                 sdkVersionCount: sdkVersionPackages.Count(),
-                isLastAlRemoved: (previousTestContainsClean && this.counterSettings.IgnoreLastAl) && packageWithLastAlEvent != null,
-                isLastUeRemoved: (previousTestContainsClean && this.counterSettings.IgnoreBadUe) && packageWithLastUeEvent != null,
-                isAllEventsOrdered: _CheckEventsTimestampOrder(testPackages.Where(e => e.ResponseCode != 0 && e.ResponseCode != 404).ToList(), platformName),
+                isLastAlRemoved: (previousTestContainsClean && CounterSettings.IgnoreLastAl) && packageWithLastAlEvent != null,
+                isLastUeRemoved: (previousTestContainsClean && CounterSettings.IgnoreBadUe) && packageWithLastUeEvent != null,
+                isFirstUeRemoved: packageWithFirstUeEvent != null,
+                isAllEventsOrdered: this.CheckEventsTimestampOrder(testPackages.Where(e => e.ResponseCode != 0 && e.ResponseCode != 404).ToList(), platformName),
                 events: eventCodes,
                 doublesSignatures: doublesSignatures,
                 badCodesPackages: badCodePackages,
@@ -411,11 +469,19 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 previousTestContainsCleaning: previousTestContainsClean,
                 containsDeserializationErrors: containsDeserializationErrors
             );
-
+            /*
+            testPackagesData = new TestPackagesData(
+                testPackages,
+                this.platformCompletedTestSequenceList,
+                this._linkedPackages,
+                testName,
+                platformName
+            );
+            */
             return testPackagesData;
         }
 
-        private bool _CheckEventsTimestampOrder(List<ProxyPackageInfoV2> testPackages, string platformName)
+        private bool CheckEventsTimestampOrder(List<ProxyPackageInfoV2> testPackages, string platformName)
         {
             LinkedList<ProxyPackageInfoV2> linkedPackages = this._linkedPackages[platformName];
 
@@ -426,6 +492,11 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
             foreach (ProxyPackageInfoV2 currentPackage in testPackages)
             {
+                if (currentPackage.RequestJson == null)
+                {
+                    continue;
+                }
+
                 IEnumerable<IHasTimestamp> currentPackageTimestampEvents = 
                     currentPackage.AllEvents().OfType<IHasTimestamp>().OrderBy(e => e.Timestamp);
 
@@ -437,7 +508,12 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 ulong minimalCurrentPackageTimestamp = (ulong)currentPackageTimestampEvents.First().Timestamp;
                 ulong maximalCurrentPackageTimestamp = (ulong)currentPackageTimestampEvents.Last().Timestamp;
 
-                ProxyPackageInfoV2 nextPackage = currentPackage != linkedPackages.Last() 
+                if (linkedPackages.Find(currentPackage) == null)
+                {
+                    continue;
+                }
+
+                ProxyPackageInfoV2 nextPackage = currentPackage != linkedPackages.Last()
                     ? linkedPackages.Find(currentPackage).Next.Value 
                     : currentPackage;
 
@@ -475,7 +551,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             return true;
         }
 
-        private ProxyPackageInfoV2 _GetJumpedEventFromPreviousTestOfType<T>(
+        private ProxyPackageInfoV2 GetJumpedEventFromPreviousTestOfType<T>(
             IEnumerable<ProxyPackageInfoV2> testPackages,
             string platformName
         )
@@ -496,8 +572,19 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             if (timestampEvents.First() is UeV2 firstUeEvent && firstUeEvent.FindPackage(testPackages).AllEvents().Count() == 1)
             {
                 ProxyPackageInfoV2 firstUePackage = firstUeEvent.FindPackage(testPackages);
+
+                if (this._linkedPackages[platformName].Find(firstUePackage) == null)
+                {
+                    return null;
+                }
+
                 ProxyPackageInfoV2 previousTestPackage = 
                     this._linkedPackages[platformName].Find(firstUePackage).Previous.Value;
+
+                while (previousTestPackage.RequestJson is not AnalyticsRequest)
+                {
+                    previousTestPackage = this._linkedPackages[platformName].Find(previousTestPackage).Previous.Value;
+                }
 
                 string previousTestPackageTestName = previousTestPackage.TestName;
 
@@ -534,7 +621,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             return null;
         }
 
-        private ProxyPackageInfoV2 _GetPackageWithLastEventOfType<T1, T2>(IEnumerable<ProxyPackageInfoV2> testPackages)
+        private ProxyPackageInfoV2 GetPackageWithLastEventOfType<T1, T2>(IEnumerable<ProxyPackageInfoV2> testPackages)
         {
             IEnumerable<T1> desiredTypeEvents = testPackages.AllEventsOfType<T1>();
             IEnumerable<IHasTimestamp> timestampEvents = testPackages.AllEventsOfType<IHasTimestamp>().OrderBy(e => e.Timestamp);
@@ -563,7 +650,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                 if (lastEventByTimestamp is T2)
                 {
-                    List<IHasTimestamp> timestampEventsWithoutLast = new List<IHasTimestamp>(timestampEvents);
+                    List<IHasTimestamp> timestampEventsWithoutLast = new(timestampEvents);
                     timestampEventsWithoutLast.Remove(lastEventByTimestamp);
 
                     IHasTimestamp secondLastEventByTimestamp = timestampEventsWithoutLast.Last();
@@ -581,17 +668,17 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             return null;
         }
 
-        private List<ProxyPackageInfoV2> _GetTestPackagesWithoutDoubles(
+        private List<ProxyPackageInfoV2> GetTestPackagesWithoutDoubles(
             List<ProxyPackageInfoV2> deserializedTestPackages
         )
         {
             List<ProxyPackageInfoV2> testPackages = deserializedTestPackages;
 
-            PackageComparerV2 packageComparer = new PackageComparerV2();
+            PackageComparerV2 packageComparer = new();
 
             if (this._previousTestPackages.Count != 0)
             {
-                List<ProxyPackageInfoV2> testPackagesToRemove = new List<ProxyPackageInfoV2>();
+                List<ProxyPackageInfoV2> testPackagesToRemove = new();
 
                 foreach (ProxyPackageInfoV2 testPackage in testPackages)
                 {

@@ -13,6 +13,6 @@ namespace TestplanPackageCounter.Packages.Content.V2.Analytics.Events
 
         [JsonProperty("code")]
         [DefaultValue(Constants.NotExistsString)]
-        public string Code { get; private set; }
+        public EventTypeV2 Code { get; private set; }
     }
 }

@@ -46,8 +46,8 @@
         {
             JObject eventsObject = JObject.Load(reader);
 
-            Dictionary<string, AbstractSdkEventV1[]> unconvertedEventsDictionary =
-                new Dictionary<string, AbstractSdkEventV1[]>();
+            Dictionary<EventType, AbstractSdkEventV1[]> eventsDictionary =
+                new Dictionary<EventType, AbstractSdkEventV1[]>();
 
             foreach (JProperty property in eventsObject.Properties())
             {
@@ -62,15 +62,8 @@
                     this._arrayTypeMap[eventType]
                 );
 
-                unconvertedEventsDictionary.Add(eventName, eventsArray);
+                eventsDictionary.Add(eventType, eventsArray);
             }
-
-            //Convert to enum. Easier to catch syncax mistake in case of event code mismatch
-            Dictionary<EventType, AbstractSdkEventV1[]> eventsDictionary =
-                unconvertedEventsDictionary.ToDictionary(
-                    item => (EventType)Enum.Parse(typeof(EventType), item.Key, true),
-                    item => item.Value
-                );
 
             return eventsDictionary;
         }

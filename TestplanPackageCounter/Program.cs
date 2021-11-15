@@ -18,62 +18,62 @@
         {
             Stopwatch watch = Stopwatch.StartNew();
 
+            string pathToResults = @"C:\Users\at\Documents\devtodev\TestResults\205 run\Full";
             //TODO: pick default values from testplan option, otherwise 999
             //TODO: null packages removal for v2
-            CounterSettings counterSettings = new CounterSettings(
-                pathToTestplan: @"C:\Users\at\Downloads\AndroidAndIosOnly\testplan.json",
-                outcomingPath: @"C:\Users\at\Downloads\AndroidAndIosOnly\testplan_edited.json",
-                pathToResults: @"C:\Users\at\Downloads\AndroidAndIosOnly",
-                sdkVersion: SdkVersions.V2,
-                ignoreLastAl: true,
-                fillMissingTestPackagesCount: true,
-                calculateWithMaxUe: false
-            );
+            CounterSettings.PathToTestplan = Path.Combine(pathToResults, "testplan.json");
+            CounterSettings.OutcomingPath = Path.Combine(pathToResults, "testplanV2edited.json");
+            CounterSettings.PathToResults = pathToResults;
+            CounterSettings.SdkVersion = SdkVersions.V2;
+            CounterSettings.IgnoreLastAl = true;
+            CounterSettings.FillMissingTestPackagesCount = true;
+            CounterSettings.CalculatePackagesWithMaxUe = false;
+            CounterSettings.IgnoreBadUe = true;
 
-            JsonSerializerSettings serializerSettings = new JsonSerializerSettings
+
+            JsonSerializerSettings serializerSettings = new()
             {
                 DefaultValueHandling = DefaultValueHandling.Populate,
                 NullValueHandling = NullValueHandling.Ignore
             };
 
             serializerSettings.Converters.Add(
-                new ParamsConverter(counterSettings.FillWithDefaultParams)
+                new ParamsConverter(CounterSettings.FillWithDefaultParams)
             );
 
-            string testplanContent = File.ReadAllText(counterSettings.PathToTestplan);
+            string testplanContent = File.ReadAllText(CounterSettings.PathToTestplan);
 
             List<TestSuite> testSuites =
                     JsonConvert.DeserializeObject<List<TestSuite>>(testplanContent, serializerSettings);
 
-            if (counterSettings.SortOnly)
+            if (CounterSettings.SortOnly)
             {
                 string serializedJson =
                     JsonConvert.SerializeObject(testSuites, Formatting.Indented, serializerSettings);
 
-                File.WriteAllText(counterSettings.OutcomingPath, serializedJson);
+                File.WriteAllText(CounterSettings.OutcomingPath, serializedJson);
 
                 return;
             }
 
             CommonEnumerator commonEnumerator;
 
-            if (counterSettings.SdkVersion == SdkVersions.V1)
+            if (CounterSettings.SdkVersion == SdkVersions.V1)
             {
-                commonEnumerator = new PackagesEnumeratorV1(counterSettings, testSuites);
+                commonEnumerator = new PackagesEnumeratorV1(testSuites);
             }
             else
             {
-                commonEnumerator = new PackagesEnumeratorV2(counterSettings, testSuites);
+                commonEnumerator = new PackagesEnumeratorV2(testSuites);
             }
 
             commonEnumerator.Enumerate();
 
-            if (counterSettings.RewriteTestplan)
+            if (CounterSettings.RewriteTestplan)
             {
-                TestPlanEditor testSuiteEditor = new TestPlanEditor(
+                TestPlanEditor testSuiteEditor = new(
                         testSuites,
-                        commonEnumerator.PackagesStatusDictionary,
-                        counterSettings
+                        commonEnumerator.PackagesStatusDictionary
                     );
 
                 testSuiteEditor.EditTestPlan();
@@ -81,15 +81,14 @@
                 string serializedJson =
                     JsonConvert.SerializeObject(testSuites, Formatting.Indented, serializerSettings);
 
-                File.WriteAllText(counterSettings.OutcomingPath, serializedJson);
+                File.WriteAllText(CounterSettings.OutcomingPath, serializedJson);
             }
 
-            if (counterSettings.WriteToCsv)
+            if (CounterSettings.WriteToCsv)
             {
-                ReportGenerator reportGenerator = new ReportGenerator(
-                    counterSettings: counterSettings,
+                ReportGenerator reportGenerator = new(
                     packagesDictionary: commonEnumerator.PackagesStatusDictionary,
-                    platformList: GetPlatformList(counterSettings.PathToResults),
+                    platformList: GetPlatformList(CounterSettings.PathToResults),
                     testSuites: testSuites
                 );
 
@@ -113,7 +112,7 @@
         /// <returns>List of platforms.</returns>
         private static List<string> GetPlatformList(string resultsPath)
         {
-            List<string> platformList = new List<string>();
+            List<string> platformList = new();
 
             foreach (string directory in Directory.GetDirectories(resultsPath))
             {

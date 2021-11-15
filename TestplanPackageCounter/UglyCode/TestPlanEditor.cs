@@ -14,19 +14,15 @@ namespace TestplanPackageCounter.UglyCode
 
         private readonly Dictionary<string, Dictionary<string, TestPackagesData>> _packagesDictionary;
 
-        private readonly CounterSettings _counterSettings;
-
         internal List<TestSuite> EditedTestSuites { get; set; }
 
         internal TestPlanEditor(
             List<TestSuite> testSuites,
-            Dictionary<string, Dictionary<string, TestPackagesData>> packagesDictionary,
-            CounterSettings counterSettings
+            Dictionary<string, Dictionary<string, TestPackagesData>> packagesDictionary
         )
         {
             this._testSuites = testSuites;
             this._packagesDictionary = packagesDictionary;
-            this._counterSettings = counterSettings;
         }
 
         private int CountMaxUeAmongPlatforms(string testName)
@@ -86,7 +82,7 @@ namespace TestplanPackageCounter.UglyCode
             int? defaultPackagesCount
         )
         {
-            if (this._counterSettings.CalculatePackagesWithMaxUe)
+            if (CounterSettings.CalculatePackagesWithMaxUe)
             {
                 return testPackages.All(
                   e => (
@@ -128,7 +124,7 @@ namespace TestplanPackageCounter.UglyCode
                 {
                     TestPackagesData testPackagesData = testPackages.Value;
 
-                    if (this._counterSettings.IgnoreBadCodePackages
+                    if (CounterSettings.IgnoreBadCodePackages
                         && testPackagesData.ContainsZeroCodePackage
                         || testPackagesData.PackagesCount == 999
                     )
@@ -139,22 +135,22 @@ namespace TestplanPackageCounter.UglyCode
                     //TODO: here's some bug with 999 count!
                     //TODO: ue count is correct?
 
-                    int ueCount = this._counterSettings.CalculatePackagesWithMaxUe ? maxUe : testPackagesData.UePackagesCountWithoutIgnored;
+                    int ueCount = CounterSettings.CalculatePackagesWithMaxUe ? maxUe : testPackagesData.UePackagesCountWithoutIgnored;
                     int packagesCountWithoutUeAndAl = testPackagesData.PackagesCountWithoutIgnored;
                         /*
-                        this._counterSettings.IgnoreUserIdentificationPackages
+                        CounterSettings.IgnoreUserIdentificationPackages
                         ? testPackagesData.PackagesCountWithoutUeAndAl - testPackagesData.AttemptPackagesCount
                         : testPackagesData.PackagesCountWithoutUeAndAl;
                         */
                     int platformCount = packagesCountWithoutUeAndAl + testPackagesData.AlPackagesCountWithoutIgnored + ueCount;
 
-                    if (!this._counterSettings.CalculatePackagesWithMaxUe)
+                    if (!CounterSettings.CalculatePackagesWithMaxUe)
                     {
                         platformCount = testPackagesData.PackagesCountWithoutIgnored;
                     }
 
                     //TODO: rework this, because maxUe and maxCa can fuck up all calculations
-                    if(this._counterSettings.CalculatePackagesWithMaxCa)
+                    if(CounterSettings.CalculatePackagesWithMaxCa)
                     {
                         platformCount = testPackagesData.PackagesCountWithoutIgnored - testPackagesData.CaPackagesCount + maxCa;
                     }
@@ -190,7 +186,7 @@ namespace TestplanPackageCounter.UglyCode
 
         private int? PackagesFromPlan(ParamsNulls testData, Platforms platform)
         {
-            if (this._counterSettings.FillMissingTestPackagesCount)
+            if (CounterSettings.FillMissingTestPackagesCount)
             {
                 return null;
             }
@@ -228,12 +224,23 @@ namespace TestplanPackageCounter.UglyCode
             {
                 string testSuiteName = testSuite.Name;
 
+                if (testSuiteName == "TrDoublesReplaceUserIdWithRestartSuite")
+                {
+                    Console.WriteLine();
+                }
+
                 IEnumerable<Test> existingResultTests = 
                     testSuite.Tests.Where(e => e.Params is ParamsNulls paramsNulls && paramsNulls.DefaultPackagesCount != 999);
 
                 foreach (var test in testSuite.Tests)
                 {
                     string testName = test.Name;
+
+                    if (testName.ToUpper().Contains("TrSkipInitRestartInitTrStepTestPart1"))
+                    {
+                        Console.WriteLine();
+                    }
+
                     string fullTestname = string.Concat(testSuiteName, "_", testName).ToUpper();
 
                     if (test.Params == null)
@@ -248,10 +255,11 @@ namespace TestplanPackageCounter.UglyCode
                     int maxUeCount = this.CountMaxUeAmongPlatforms(fullTestname);
                     int maxCaCount = this.CountMaxCaAmongPlatforms(fullTestname);
 
+                    /*
                     if (!existingResultTests.Any(e => e.Name.Equals(testName, StringComparison.OrdinalIgnoreCase)))
                     {
                         //TODO: bullshit! Needs to search key in other collection!
-                        if (this._counterSettings.FillMissingTestPackagesCount)
+                        if (CounterSettings.FillMissingTestPackagesCount)
                         {
                             testData.DefaultPackagesCount = 999;
                             testData.PlatformPackagesCount = null;
@@ -260,6 +268,7 @@ namespace TestplanPackageCounter.UglyCode
 
                         continue;
                     }
+                    */
 
                     //Reflexy me
                     if (this.IsAllPackagesCountsAreEqualsDefault(this._packagesDictionary[fullTestname], maxUeCount, defaultPackagesCount))

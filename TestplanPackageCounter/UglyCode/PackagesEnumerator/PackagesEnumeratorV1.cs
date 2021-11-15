@@ -23,11 +23,10 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
         private List<ProxyPackageInfoV1> _previousTestPackages = new List<ProxyPackageInfoV1>();
 
-        internal PackagesEnumeratorV1(CounterSettings counterSettings, List<TestSuite> testSuites)
+        internal PackagesEnumeratorV1(List<TestSuite> testSuites)
         {
-            this.counterSettings = counterSettings;
             this.MaxUeDictionary = new Dictionary<string, int>();
-            this.platformList = this.GetPlatformList(counterSettings.PathToResults);
+            this.platformList = this.GetPlatformList(CounterSettings.PathToResults);
             this.testBeforeCleanDictionary = this.GetToKnowCleaningTest();
             this.PackagesStatusDictionary = new Dictionary<string, Dictionary<string, TestPackagesData>>();
             this.testSuites = testSuites;
@@ -65,7 +64,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             packageSerializationSettings.Converters.Add(new EventsArrayConverter());
             packageSerializationSettings.Converters.Add(new LuDataConverter());
 
-            foreach (string directory in Directory.GetDirectories(this.counterSettings.PathToResults))
+            foreach (string directory in Directory.GetDirectories(CounterSettings.PathToResults))
             {
                 string platformName = Path.GetFileName(directory);
 
@@ -180,8 +179,9 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 caPackagesCount: 0,
                 attemptPackagesCount: 0,
                 sdkVersionCount: sdkVersionPackages.Count(),
-                isLastAlRemoved: (previousTestContainsClean && this.counterSettings.IgnoreLastAl) && packageWithLastAlEvent != null,
-                isLastUeRemoved: (previousTestContainsClean && this.counterSettings.IgnoreBadUe) && packageWithLastUeEvent != null,
+                isLastAlRemoved: (previousTestContainsClean && CounterSettings.IgnoreLastAl) && packageWithLastAlEvent != null,
+                isLastUeRemoved: (previousTestContainsClean && CounterSettings.IgnoreBadUe) && packageWithLastUeEvent != null,
+                isFirstUeRemoved: false,
                 isAllEventsOrdered: true,
                 events: null,
                 doublesSignatures: doublesSignatures,

@@ -2,71 +2,36 @@
 {
     using TestplanPackageCounter.General;
 
-    internal class CounterSettings
+    internal static class CounterSettings
     {
-        internal string PathToTestplan { get; }
+        internal static string PathToTestplan { get; set; }
 
-        internal string OutcomingPath { get; }
+        internal static string OutcomingPath { get; set; }
 
-        internal string PathToResults { get; }
+        internal static string PathToResults { get; set; }
 
-        internal bool RewriteTestplan { get; }
+        internal static bool RewriteTestplan { get; set; } = true;
 
-        internal bool IgnoreBadUe { get; }
+        internal static bool IgnoreBadUe { get; set; } = false;
 
-        internal bool IgnoreLastAl { get; }
+        internal static bool IgnoreLastAl { get; set; } = false;
 
-        internal bool IgnoreUserIdentificationPackages { get; }
+        internal static bool IgnoreUserIdentificationPackages { get; set; } = true;
 
-        internal bool IgnoreBadCodePackages { get; }
+        internal static bool IgnoreBadCodePackages { get; set; } = true;
 
-        internal bool CalculatePackagesWithMaxUe { get; }
+        internal static bool CalculatePackagesWithMaxUe { get; set; } = true;
 
-        internal bool CalculatePackagesWithMaxCa { get; }
+        internal static bool CalculatePackagesWithMaxCa { get; set; } = false;
 
-        internal bool FillWithDefaultParams { get; }
+        internal static bool FillWithDefaultParams { get; set; } = false;
 
-        internal bool FillMissingTestPackagesCount { get; }
+        internal static bool FillMissingTestPackagesCount { get; set; } = false;
 
-        internal bool WriteToCsv { get; }
+        internal static bool WriteToCsv { get; set; } = true;
 
-        internal SdkVersions SdkVersion { get; }
+        internal static SdkVersions SdkVersion { get; set; } = SdkVersions.V2;
 
-        internal bool SortOnly { get; }
-
-        public CounterSettings(
-            string pathToTestplan,
-            string outcomingPath,
-            string pathToResults,
-            SdkVersions sdkVersion,
-            bool rewriteTestplan = true,
-            bool ignoreBadUe = true,
-            bool ignoreLastAl = false,
-            bool ignoreUserIdentification = true,
-            bool ignoreBadCodePackages = true,
-            bool calculateWithMaxUe = true,
-            bool calculateWithMaxCa = true,
-            bool fillWithDefaultParams = false,
-            bool fillMissingTestPackagesCount = false,
-            bool writeToCsv = true,
-            bool sortOnly = false
-        )
-        {
-            this.PathToTestplan = pathToTestplan;
-            this.OutcomingPath = outcomingPath;
-            this.PathToResults = pathToResults;
-            this.SdkVersion = sdkVersion;
-            this.RewriteTestplan = rewriteTestplan;
-            this.IgnoreBadUe = ignoreBadUe;
-            this.IgnoreLastAl = ignoreLastAl;
-            this.IgnoreUserIdentificationPackages = ignoreUserIdentification;
-            this.IgnoreBadCodePackages = ignoreBadCodePackages;
-            this.CalculatePackagesWithMaxUe = calculateWithMaxUe;
-            this.CalculatePackagesWithMaxCa = calculateWithMaxCa;
-            this.FillWithDefaultParams = fillWithDefaultParams;
-            this.FillMissingTestPackagesCount = fillMissingTestPackagesCount;
-            this.WriteToCsv = writeToCsv;
-            this.SortOnly = sortOnly;
-        }
+        internal static bool SortOnly { get; set; } = false;
     }
 }

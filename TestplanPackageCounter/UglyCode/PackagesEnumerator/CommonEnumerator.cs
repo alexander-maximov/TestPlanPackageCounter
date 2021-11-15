@@ -14,8 +14,6 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
     {
         protected Dictionary<string, List<string>> catchDeserializationErrorTests = new Dictionary<string, List<string>>();
 
-        protected CounterSettings counterSettings;
-
         protected List<string> platformList = new List<string>();
 
         protected Dictionary<string, bool> testBeforeCleanDictionary = new Dictionary<string, bool>();

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using TestplanPackageCounter.Counter;
 using TestplanPackageCounter.General;
 using TestplanPackageCounter.Testplan.Content;
@@ -12,20 +13,16 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
     internal class ReportGenerator
     {
         private readonly Dictionary<string, Dictionary<string, TestPackagesData>> _packagesDictionary;
-        private readonly CounterSettings _counterSettings;
         private readonly List<string> _platformList;
         private readonly List<TestSuite> _testSuites;
 
         internal ReportGenerator(
-            CounterSettings counterSettings, 
             Dictionary<string, Dictionary<string, TestPackagesData>> packagesDictionary,
             List<string> platformList,
             List<TestSuite> testSuites
         )
         {
             //TODO: Write to excel
-
-            this._counterSettings = counterSettings;
             this._packagesDictionary = packagesDictionary;
             this._platformList = platformList;
             this._testSuites = testSuites;
@@ -33,16 +30,30 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
         internal void OverwhelmingOne()
         {
-            string filePath = Path.Combine(this._counterSettings.PathToResults, "Overwhelming_packagesData.csv");
+            string filePath = Path.Combine(CounterSettings.PathToResults, "Overwhelming_packagesData.csv");
 
-            StringBuilder csvContent = new StringBuilder();
+            StringBuilder csvContent = new();
 
             //TODO: separate platform and test
             this._GenerateTitleLine("Test name", csvContent, true, "Platform");
 
-            foreach (var packageData in this._packagesDictionary)
+            int i = 0;
+
+            foreach (KeyValuePair<string, Dictionary<string, TestPackagesData>> packageData in this._packagesDictionary)
             {
                 string testName = packageData.Key;
+
+                if (packageData.Key.Equals("APPLICATIONINFOSUITE_RESTARTAFTERSETANOTHERPROJECT", StringComparison.OrdinalIgnoreCase))
+                {
+                    int j = 9;
+                }
+
+                if (this.CompareEventCodes(packageData.Value))
+                {
+                    i++;
+                    Console.Write($"\rEquals tests count: {i}");
+                    continue;
+                }
 
                 foreach (var platformPackageData in packageData.Value)
                 {
@@ -64,7 +75,43 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 }
             }
 
+            Console.WriteLine();
+
             File.WriteAllText(filePath, csvContent.ToString());
+        }
+
+        private bool CompareEventCodes(Dictionary<string, TestPackagesData> testPackagesDataDict)
+        {
+            IEnumerable<TestPackagesData> defaultFreePackagesData = testPackagesDataDict.Values.Where(e => e.OriginalPackagesCount != 999);
+
+            if (!defaultFreePackagesData.Any())
+            {
+                return false;
+            }
+
+            TestPackagesData firstPackageData = defaultFreePackagesData.FirstOrDefault(e => e.OriginalPackagesCount != 999);
+
+            if (firstPackageData is null)
+            {
+                return false;
+            }
+
+            IEnumerable<string> firstEventCodes = this.TrimTimestamp(firstPackageData.EventCodes);
+
+            return defaultFreePackagesData.All(
+                e => Enumerable.SequenceEqual(
+                    this.TrimTimestamp(e.EventCodes), 
+                    this.TrimTimestamp(firstEventCodes)
+                )
+            );
+        }
+
+        private IEnumerable<string> TrimTimestamp(IEnumerable<string> eventCodes)
+        {
+            foreach (string eventCode in eventCodes)
+            {
+                yield return Regex.Match(eventCode, "\\[(.)*\\]").ToString();
+            }
         }
 
         private void _GeneratePackagesData(StringBuilder csvContent, TestPackagesData testPackagesData)
@@ -85,7 +132,12 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             csvContent.Append($";{testPackagesData.PreviousTestContainsCleaning}");
             csvContent.Append($";{testPackagesData.ContainsDeserializationErrors}");
 
-            foreach (string eventCode in testPackagesData.Events)
+            if (testPackagesData.EventCodes == null)
+            {
+                return;
+            }
+
+            foreach (string eventCode in testPackagesData.EventCodes)
             {
                 csvContent.Append($";{eventCode}");
             }
@@ -96,16 +148,16 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
         /// </summary>
         internal void WriteToCsv()
         {
-            StringBuilder csvContent = new StringBuilder();
+            StringBuilder csvContent = new();
             _GenerateTitleLine(csvContent);
             _GenerateRestPackageContent(csvContent, this._packagesDictionary);
-            string filePath = Path.Combine(this._counterSettings.PathToResults, "packagesCountNew.csv");
+            string filePath = Path.Combine(CounterSettings.PathToResults, "packagesCountNew.csv");
             File.WriteAllText(filePath, csvContent.ToString());
         }
 
         internal void EasyTestplanReport()
         {
-            StringBuilder csvContent = new StringBuilder();
+            StringBuilder csvContent = new();
 
             csvContent.Append("Testplan packages");
             csvContent.Append(";Default count");
@@ -179,7 +231,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 }
             }
 
-            string filePath = Path.Combine(this._counterSettings.PathToResults, "EasyTestplanView.csv");
+            string filePath = Path.Combine(CounterSettings.PathToResults, "EasyTestplanView.csv");
             File.WriteAllText(filePath, csvContent.ToString());
         }
 
@@ -235,7 +287,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                         int packgesCountWithoutDoublesAndLastEvents =
                                 (
-                                    this._counterSettings.IgnoreUserIdentificationPackages 
+                                    CounterSettings.IgnoreUserIdentificationPackages 
                                     ? testPackagesData.PackagesCountWithoutAlCaUe - testPackagesData.AttemptPackagesCount
                                     : testPackagesData.PackagesCountWithoutAlCaUe
                                 )
