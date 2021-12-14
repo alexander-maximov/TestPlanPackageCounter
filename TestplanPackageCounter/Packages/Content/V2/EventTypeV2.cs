@@ -83,6 +83,10 @@ namespace TestplanPackageCounter.Packages.Content.V2
         /// <summary>
         /// Virtual currency payment.
         /// </summary>
-        Vp
+        Vp,
+        /// <summary>
+        /// AdImpression
+        /// </summary>
+        Adrv
     }
 }

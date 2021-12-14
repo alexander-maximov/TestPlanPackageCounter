@@ -12,15 +12,15 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 {
     internal abstract class CommonEnumerator
     {
-        protected Dictionary<string, List<string>> catchDeserializationErrorTests = new Dictionary<string, List<string>>();
+        protected Dictionary<string, List<string>> catchDeserializationErrorTests = new();
 
-        protected List<string> platformList = new List<string>();
+        protected List<string> platformList = new();
 
-        protected Dictionary<string, bool> testBeforeCleanDictionary = new Dictionary<string, bool>();
+        protected Dictionary<string, bool> testBeforeCleanDictionary = new();
 
-        protected List<TestSuite> testSuites = new List<TestSuite>();
+        protected List<TestSuite> testSuites = new();
 
-        protected Dictionary<string, List<(string, bool)>> platformCompletedTestSequenceList = new Dictionary<string, List<(string, bool)>>();
+        protected Dictionary<string, List<(string, bool)>> platformCompletedTestSequenceList = new();
 
         internal Dictionary<string, Dictionary<string, TestPackagesData>> PackagesStatusDictionary { get; set; }
 
@@ -30,17 +30,17 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
         internal virtual void Enumerate() { }
 
-        protected bool IsPreviousTestContainsCleaning(string fullTestName, LinkedList<string> testsSequense)
+        protected bool IsNextTestContainsCleaning(string fullTestName, LinkedList<string> testsSequense)
         {
-            if (fullTestName == testsSequense.First())
+            if (fullTestName == testsSequense.Last())
             {
                 return true;
             }
 
-            string previousTestFullName = testsSequense.Find(fullTestName).Previous.Value;
+            string nextTestFullName = testsSequense.Find(fullTestName).Next.Value;
 
-            string testSuiteName = previousTestFullName.Substring(0, previousTestFullName.IndexOf("_"));
-            string testName = previousTestFullName.Replace(testSuiteName, "").Substring(1);
+            string testSuiteName = nextTestFullName.Substring(0, nextTestFullName.IndexOf("_"));
+            string testName = nextTestFullName.Replace(testSuiteName, "").Substring(1);
 
             ParamsNulls testParams = (ParamsNulls)(
                                         from testSuite in this.testSuites
@@ -60,7 +60,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
         protected Dictionary<string, bool> GetToKnowCleaningTest()
         {
-            Dictionary<string, bool> previousTestIsCleanDictionary = new Dictionary<string, bool>();
+            Dictionary<string, bool> previousTestIsCleanDictionary = new();
 
             bool firstTestPlug = true;
 
@@ -118,7 +118,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
         /// <returns>List of platforms.</returns>
         protected List<string> GetPlatformList(string resultsPath)
         {
-            List<string> platformList = new List<string>();
+            List<string> platformList = new();
 
             foreach (string directory in Directory.GetDirectories(resultsPath))
             {
@@ -132,7 +132,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
         protected Dictionary<string, List<string>> GetTestList()
         {
-            Dictionary<string, List<string>> testList = new Dictionary<string, List<string>>();
+            Dictionary<string, List<string>> testList = new();
 
             foreach (TestSuite testSuite in this.testSuites)
             {
@@ -166,8 +166,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             Dictionary<string, Dictionary<string, TestPackagesData>> packagesDictionary
         )
         {
-            Dictionary<string, Dictionary<string, TestPackagesData>> convertedDictionary =
-                new Dictionary<string, Dictionary<string, TestPackagesData>>();
+            Dictionary<string, Dictionary<string, TestPackagesData>> convertedDictionary = new();
 
             foreach (var platform in packagesDictionary)
             {
@@ -181,7 +180,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                         continue;
                     }
 
-                    Dictionary<string, TestPackagesData> innerDictionary = new Dictionary<string, TestPackagesData>
+                    Dictionary<string, TestPackagesData> innerDictionary = new()
                     {
                         { platform.Key, testName.Value }
                     };
@@ -195,7 +194,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
         protected List<string> PackagesDoubleCheck<T>(List<T> testPackages, List<T> testPackagesOriginal)
         {
-            List<string> doublesSignaturesList = new List<string>();
+            List<string> doublesSignaturesList = new();
 
             if (testPackagesOriginal.Count != testPackages.Count)
             {

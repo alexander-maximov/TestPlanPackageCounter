@@ -34,28 +34,46 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
             StringBuilder csvContent = new();
 
-            //TODO: separate platform and test
             this._GenerateTitleLine("Test name", csvContent, true, "Platform");
 
-            int i = 0;
+            int equalsCount = 0;
+            ulong eventsCountTotal = 0;
 
             foreach (KeyValuePair<string, Dictionary<string, TestPackagesData>> packageData in this._packagesDictionary)
             {
                 string testName = packageData.Key;
                 bool breakCircle = false;
+                bool commonExist = false;
 
                 if (this.CompareEventCodes(packageData.Value))
                 {
-                    i++;
-                    Console.Write($"\rEquals tests count: {i}");
+                    equalsCount++;
+                    Console.Write($"\rEquals tests count: {equalsCount}");
                     breakCircle = true;
                 }
 
-                foreach (var platformPackageData in packageData.Value)
+                IEnumerable<IEnumerable<string>> eventCodesCollection = from packageInfo in packageData.Value
+                                                                        select this.TrimTimestamp(packageInfo.Value.EventCodes);
+
+                IEnumerable<string> eventCodesWithoutTimestamp = this.Mode(eventCodesCollection, out int commonCount);
+
+                foreach (KeyValuePair<string, TestPackagesData> platformPackageData in packageData.Value)
                 {
                     string platformName = breakCircle ? "All" : platformPackageData.Key.Replace("TestResults_", "");
 
                     TestPackagesData testPackagesData = platformPackageData.Value;
+                    eventsCountTotal += (ulong)testPackagesData.EventCodes.Count();
+
+                    if (!breakCircle && Enumerable.SequenceEqual(eventCodesWithoutTimestamp, this.TrimTimestamp(testPackagesData.EventCodes)))
+                    {
+                        if (commonExist)
+                        {
+                            continue;
+                        }
+
+                        platformName = $"Common x{commonCount} ({platformName} like)";
+                        commonExist = true;
+                    }
 
                     if (testPackagesData.PackagesCountWithoutIgnored == 999)
                     {
@@ -82,9 +100,49 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 }
             }
 
-            Console.WriteLine();
+            Console.WriteLine($"\nTotal events count in report: {eventsCountTotal}");
 
             File.WriteAllText(filePath, csvContent.ToString());
+        }
+
+        private IEnumerable<string> Mode(IEnumerable<IEnumerable<string>> list, out int max)
+        {
+            max = 0;
+            // Initialize the return value
+            IEnumerable<string> mode = default;
+
+            // Test for a null reference and an empty list
+            if (list != null && list.Count() > 0)
+            {
+                // Store the number of occurences for each element
+                Dictionary<IEnumerable<string>, int> counts = new();
+
+                // Add one to the count for the occurence of a character
+                foreach (IEnumerable<string> element in list)
+                {
+                    if (counts.FirstOrDefault(e => Enumerable.SequenceEqual(e.Key, element)) is KeyValuePair<IEnumerable<string>, int> keyValuePair && keyValuePair.Key is not null)
+                    {
+                        counts[keyValuePair.Key]++;
+                        continue;
+                    }
+                        
+                    counts.Add(element, 1);
+                }
+
+                // Loop through the counts of each element and find the 
+                // element that occurred most often
+
+                foreach (KeyValuePair<IEnumerable<string>, int> count in counts)
+                {
+                    if (count.Value > max)
+                    {
+                        // Update the mode
+                        mode = count.Key;
+                        max = count.Value;
+                    }
+                }
+            }
+            return mode;
         }
 
         private bool CompareEventCodes(Dictionary<string, TestPackagesData> testPackagesDataDict)
@@ -123,8 +181,8 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
         private void _GeneratePackagesData(StringBuilder csvContent, TestPackagesData testPackagesData)
         {
-            csvContent.Append($";{testPackagesData.PackagesCountWithoutIgnored}");
             csvContent.Append($";{testPackagesData.OriginalPackagesCount}");
+            csvContent.Append($";{testPackagesData.PackagesCount}");
             csvContent.Append($";{testPackagesData.UePackagesCount}");
             csvContent.Append($";{testPackagesData.IsLastUeEventRemoved}");
             csvContent.Append($";{testPackagesData.AlPackagesCount}");
@@ -251,8 +309,8 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 csvContent.Append($";{doubleHeadingLine}");
             }
 
-            csvContent.Append(";Packages count");
-            csvContent.Append(";Original packages count");
+            csvContent.Append(";Testplan packages count");
+            csvContent.Append(";Packages count in result");
             csvContent.Append(";Ue packages count");
             csvContent.Append(";Ue removed");
             csvContent.Append(";Al packages count");
@@ -264,7 +322,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             csvContent.Append(";Events count");
             csvContent.Append(";Is events ordered");
             csvContent.Append(";Contains code 0");
-            csvContent.Append(";Previous test contains cleaning");
+            csvContent.Append(";Next test contains cleaning");
             csvContent.AppendLine(";Contains deserialization errors");
         }
 

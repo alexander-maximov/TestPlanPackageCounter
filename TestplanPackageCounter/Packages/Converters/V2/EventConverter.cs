@@ -35,6 +35,7 @@ namespace TestplanPackageCounter.Packages.Converters.V2
                 {EventTypeV2.Ts, typeof(TsV2)},
                 {EventTypeV2.Ue, typeof(UeV2)},
                 {EventTypeV2.Vp, typeof(VpV2)},
+                {EventTypeV2.Adrv, typeof(AdrvV2) }
             };
 
         public override bool CanConvert(Type objectType) =>
@@ -46,7 +47,7 @@ namespace TestplanPackageCounter.Packages.Converters.V2
 
             if (eventCodeProperty == null)
             {
-                throw new Exception("Contains no events");
+                throw new Exception("contains no events");
             }
 
             string eventTypeName = eventCodeProperty.Value.ToString();

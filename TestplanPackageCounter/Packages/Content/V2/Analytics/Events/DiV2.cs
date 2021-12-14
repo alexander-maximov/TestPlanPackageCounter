@@ -1,10 +1,11 @@
 ﻿using Newtonsoft.Json;
 using System.ComponentModel;
 using TestplanPackageCounter.General;
+using TestplanPackageCounter.Packages.Content.General;
 
 namespace TestplanPackageCounter.Packages.Content.V2.Analytics.Events
 {
-    public class DiV2 : AbstractSdkEventV2
+    public class DiV2 : AbstractSdkEventV2, IHasTimestamp
     {
         [JsonProperty("osVersion")]
         [DefaultValue(Constants.NotExistsString)]

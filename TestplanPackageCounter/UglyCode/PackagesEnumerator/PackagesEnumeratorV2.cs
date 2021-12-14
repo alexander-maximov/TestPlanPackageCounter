@@ -27,6 +27,12 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
         private List<ProxyPackageInfoV2> _previousTestPackages = new();
 
+        private IEnumerable<string> _ignoreFirstUeSkip = new List<string>()
+        {
+            "ApplicationInfoSuite_CrossReplaceNotActiveUserIDAfterInit".ToUpper(),
+            "APPLICATIONINFOSUITE_CROSSSETUSERID"
+        };
+
         internal PackagesEnumeratorV2(List<TestSuite> testSuites)
         {
             this.MaxUeDictionary = new Dictionary<string, int>();
@@ -87,7 +93,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                 this.platformCompletedTestSequenceList.Add(
                     platformName,
-                    testsSequence.Select(e => (e, this.IsPreviousTestContainsCleaning(e, testsSequence))).ToList()
+                    testsSequence.Select(e => (e, this.IsNextTestContainsCleaning(e, testsSequence))).ToList()
                 );
 
                 this._deserializedPackages.Add(platformName, new Dictionary<string, List<ProxyPackageInfoV2>>());
@@ -160,7 +166,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                             this.catchDeserializationErrorTests[platformName].Add(testName);
 
-                            Console.WriteLine($"\n{Path.GetFileName(jsonFile)} {e.Message}");
+                            Console.WriteLine($"\nFile [{Path.Combine(platformName, testName, Path.GetFileName(jsonFile))}] {e.Message}");
                         }
                     }
 
@@ -259,12 +265,12 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                     this.PackagesStatusDictionary[platformName][testName] = this.CalculatePackages(packagesList, testName, platformName);
 
-                    Console.Write($"\r({++counter}/{platformPackagesCount}) enumerated. ({skipCounter}/{this.TestsList.Count}) tests wasn't in results folder.");                    
+                    Console.Write($"\r({++counter}/{platformPackagesCount}) enumerated. ({skipCounter}/{this.TestsList.Count}) tests exists in the plan, but not in results folder.");                    
                 }
 
                 if (counter == platformPackagesCount)
                 {
-                    Console.Write($"\rAll {platformPackagesCount} packages enumerated. ({skipCounter}/{this.TestsList.Count}) tests wasn't in results folder.");
+                    Console.Write($"\rAll {platformPackagesCount} packages enumerated. ({skipCounter}/{this.TestsList.Count}) tests exists in the plan, but not in results folder.");
                 }
 
                 Console.WriteLine("\n");
@@ -301,8 +307,14 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             IEnumerable<ProxyPackageInfoV2> ueContainingPackages = this.FindAllPackagesOfEvent<UeV2>(testPackages);
             IEnumerable<ProxyPackageInfoV2> caContainingPackages = this.FindAllPackagesOfEvent<CaV2>(testPackages);
 
-            ProxyPackageInfoV2 packageWithFirstUeEvent = this.GetJumpedEventFromPreviousTestOfType<UeV2>(testPackages, platformName);
+            ProxyPackageInfoV2 packageWithFirstUeEvent = 
+                this.ContainsRestartOrUserChange(testName) || this._ignoreFirstUeSkip.Contains(testName.ToUpper())
+                ? null
+                : this.GetJumpedEventFromPreviousTestOfType<UeV2>(testPackages, platformName);
+
             ProxyPackageInfoV2 packageWithLastAlEvent = this.GetPackageWithLastEventOfType<AlV2, UeV2>(testPackages);
+
+            //TODO: drop event, not package! Or package, in it contains only last Ue event
             ProxyPackageInfoV2 packageWithLastUeEvent = this.GetPackageWithLastEventOfType<UeV2, AlV2>(testPackages);
 
             List<ProxyPackageInfoV2> badCodePackages = new();
@@ -314,42 +326,42 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 {
                     containsZeroResponseCode = testPackage.ResponseCode == 0;
 
-                    badCodePackages.Add(testPackage);
+                    //badCodePackages.Add(testPackage);
                 }
             }
-
+            /*
             foreach (ProxyPackageInfoV2 badCodePackage in badCodePackages)
             {
                 testPackages.Remove(badCodePackage);
             }
+            */
 
-            bool previousTestContainsClean = this.platformCompletedTestSequenceList.Any(e => e.Key.Equals(platformName, StringComparison.OrdinalIgnoreCase) &&
+            bool nextTestContainsClean = this.platformCompletedTestSequenceList.Any(e => e.Key.Equals(platformName, StringComparison.OrdinalIgnoreCase) &&
                 e.Value.Any(x => x.Item1.Equals(testName, StringComparison.OrdinalIgnoreCase))) && this.platformCompletedTestSequenceList[platformName].Find(e => e.Item1.Equals(testName, StringComparison.OrdinalIgnoreCase)).Item2;
 
-            if (previousTestContainsClean && (CounterSettings.IgnoreLastAl || CounterSettings.IgnoreBadUe))
+            if (nextTestContainsClean && (CounterSettings.IgnoreLastAl || CounterSettings.IgnoreBadUe))
             {
                 testPackages.Remove(packageWithLastUeEvent);
                 testPackages.Remove(packageWithLastAlEvent);
-                testPackages.Remove(packageWithFirstUeEvent);
             }
+
+            testPackages.Remove(packageWithFirstUeEvent);
 
             IEnumerable<ProxyPackageInfoV2> attemptPackages = 
                 new List<ProxyPackageInfoV2>(testPackages.Where(e => e.RequestJson is UserIdentificationRequest));
             IEnumerable<ProxyPackageInfoV2> sdkVersionPackages = 
                 new List<ProxyPackageInfoV2>(testPackages.Where(e => e.RequestJson is SdkVersionRequest));
 
-            /*
             foreach (ProxyPackageInfoV2 attemptPackage in attemptPackages)
             {
                 testPackages.Remove(attemptPackage);
             }
-            */
 
             List<string> eventCodes = new();
 
             int index = 1;
 
-            if (previousTestContainsClean && (CounterSettings.IgnoreLastAl || CounterSettings.IgnoreBadUe))
+            if (nextTestContainsClean && (CounterSettings.IgnoreLastAl || CounterSettings.IgnoreBadUe))
             {
                 if (packageWithFirstUeEvent != null)
                 {
@@ -376,16 +388,24 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 index++;
             }
             */
-
+            /*
             foreach (ProxyPackageInfoV2 badCodePackage in badCodePackages)
             {
                 testPackages.Add(badCodePackage);
             }
+            */
 
             foreach (ProxyPackageInfoV2 testPackage in testPackages.Where(e => e.RequestJson is AnalyticsRequest or null).OrderBy(e => e.Timestamp))
             {
-                int? responseCode = testPackage.ResponseCode;
+                int responseCode = (int)testPackage.ResponseCode;
                 string requestUrl = testPackage.RequestUrl;
+                string prefixTestName = testPackage.TestName != testName ? testPackage.TestName : "";
+
+                if (!string.IsNullOrEmpty(prefixTestName))
+                {
+                    Console.WriteLine($"\n{testName} contains packages from {prefixTestName}\n");
+                }
+
 
                 if (requestUrl == null)
                 {
@@ -405,17 +425,70 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 {
                     if (abstractSdkEvent is IHasTimestamp timestampEvent)
                     {
-                        var timestamp = timestampEvent.Timestamp;
-                        eventCodes.Add($"[(#{index}){abstractSdkEvent.Code}:(Code:{responseCode})]({timestamp})");
+                        ulong? timestamp = timestampEvent.Timestamp;
+
+                        if (nextTestContainsClean && packageWithLastUeEvent is null && abstractSdkEvent is UeV2 ueEvent)
+                        {
+                            IEnumerable<IHasTimestamp> timestampEvents = 
+                                testPackages.Where(e => e.RequestJson is AnalyticsRequest or null).OrderBy(e => e.Timestamp).AllEventsOfType<IHasTimestamp>();
+
+                            if (ueEvent == timestampEvents.Last())
+                            {
+                                continue;
+                            }
+                        }
+                        
+                        if (testName.ToUpper().Contains("WORKWITHUSERSSUITE") && responseCode == 404)
+                        {
+                            continue;
+                        }
+                        
+                        if (responseCode == 0 || responseCode == 200)
+                        {
+                            eventCodes.Add($"[{prefixTestName}(#{index}){abstractSdkEvent.Code}]({timestamp})");
+                            index++;
+                            continue;
+                        }
+
+                        eventCodes.Add($"[{prefixTestName}(#{index}){abstractSdkEvent.Code}:(Code:{responseCode})]({timestamp})");
+                        index++;
+                        continue;
+                    }
+                    
+                    if (testName.ToUpper().Contains("WORKWITHUSERSSUITE") && responseCode == 404)
+                    {
+                        continue;
+                    }
+                    
+                    if (responseCode == 0 || responseCode == 200)
+                    {
+                        eventCodes.Add($"[{prefixTestName}(#{index}){abstractSdkEvent.Code}]");
+                        index++;
                         continue;
                     }
 
-                    eventCodes.Add($"[(#{index}){abstractSdkEvent.Code}:(Code:{responseCode})]");
+                    eventCodes.Add($"[{prefixTestName}(#{index}){abstractSdkEvent.Code}:(Code:{responseCode})]");
+                    index++;
                 }
 
-                index++;
             }
 
+            foreach (ProxyPackageInfoV2 proxyPackage in testPackages.Where(e => e.RequestJson is SdkVersionRequest))
+            {
+                if (testName.ToUpper().Contains("WORKWITHUSERSSUITE") && proxyPackage.ResponseCode == 404)
+                {
+                    continue;
+                }
+
+                if (proxyPackage.ResponseCode == 0 || proxyPackage.ResponseCode == 200)
+                {
+                    eventCodes.Add($"[(#{index})Config package]");
+                    continue;
+                }
+
+                eventCodes.Add($"[(#{index})Config package:(Code:{proxyPackage.ResponseCode})]");
+            }
+            /*
             if (previousTestContainsClean && (CounterSettings.IgnoreLastAl || CounterSettings.IgnoreBadUe))
             {
                 if (packageWithLastUeEvent != null)
@@ -445,28 +518,29 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                     testPackages.Add(packageWithFirstUeEvent);
                 }
             }
+            */
 
             //TODO: this boi isn't work
             bool containsDeserializationErrors = this.catchDeserializationErrorTests.Any(e => e.Key.Equals(platformName, StringComparison.OrdinalIgnoreCase) &&
                 e.Value.Any(x => x.Equals(testName, StringComparison.OrdinalIgnoreCase)));
 
             TestPackagesData testPackagesData = new(
-                originalPackagesCount: testPackages.Count,
-                packagesCount: testPackages.Count,
+                originalPackagesCount: TestPlanPackagesCount(testName, platformName),
+                packagesCount: testPackages.Where(e => e.ResponseCode != 404 && e.RequestJson is not UserIdentificationRequest).Count(),
                 alPackagesCount: alContainingPackages.Count(),
                 uePackagesCount: ueContainingPackages.Count(),
                 caPackagesCount: caContainingPackages.Count(),
                 attemptPackagesCount: attemptPackages.Count(),
                 sdkVersionCount: sdkVersionPackages.Count(),
-                isLastAlRemoved: (previousTestContainsClean && CounterSettings.IgnoreLastAl) && packageWithLastAlEvent != null,
-                isLastUeRemoved: (previousTestContainsClean && CounterSettings.IgnoreBadUe) && packageWithLastUeEvent != null,
+                isLastAlRemoved: (nextTestContainsClean && CounterSettings.IgnoreLastAl) && packageWithLastAlEvent != null,
+                isLastUeRemoved: (nextTestContainsClean && CounterSettings.IgnoreBadUe) && packageWithLastUeEvent != null,
                 isFirstUeRemoved: packageWithFirstUeEvent != null,
                 isAllEventsOrdered: this.CheckEventsTimestampOrder(testPackages.Where(e => e.ResponseCode != 0 && e.ResponseCode != 404).ToList(), platformName),
                 events: eventCodes,
                 doublesSignatures: doublesSignatures,
                 badCodesPackages: badCodePackages,
                 containsZeroCodePackage: containsZeroResponseCode,
-                previousTestContainsCleaning: previousTestContainsClean,
+                previousTestContainsCleaning: nextTestContainsClean,
                 containsDeserializationErrors: containsDeserializationErrors
             );
             /*
@@ -479,6 +553,75 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             );
             */
             return testPackagesData;
+        }
+
+        private bool ContainsRestartOrUserChange(string fullTestName)
+        {
+            string suiteName = fullTestName.Substring(0, fullTestName.IndexOf("_"));
+            TestSuite testSuite = this.testSuites.FirstOrDefault(e => e.Name.Equals(suiteName, StringComparison.OrdinalIgnoreCase));
+
+            string testName = fullTestName.Substring(fullTestName.IndexOf("_") + 1);
+            Test test = testSuite.Tests.First(e => e.Name.Equals(testName, StringComparison.OrdinalIgnoreCase));
+
+            ParamsNulls testParams = (ParamsNulls)test.Params;
+
+            return testParams.RestartMode == "BeforeTest" || testParams.ChangeUserID is null;
+        }
+
+        private readonly Dictionary<Platforms, List<string>> _patternsDictionary =
+            new()
+        {
+            { Platforms.Android, new List<string>() { "api", "android" } },
+            { Platforms.IOS, new List<string>() { "ios" } },
+            { Platforms.MacOS, new List<string>() { "macos" } },
+            { Platforms.Uwp, new List<string>() { "uwp" } },
+            { Platforms.Windows, new List<string>() { "win" } }
+        };
+
+        private bool IsPlatformValid(List<string> patterns, string platformName) =>
+            patterns.Any(e => platformName.ToLower().Contains(e.ToLower()));
+
+        private int TestPlanPackagesCount(string fullTestName, string platformName)
+        {
+            string suiteName = fullTestName.Substring(0, fullTestName.IndexOf("_"));
+            TestSuite testSuite = this.testSuites.FirstOrDefault(e => e.Name.Equals(suiteName, StringComparison.OrdinalIgnoreCase));
+
+            string testName = fullTestName.Substring(fullTestName.IndexOf("_") + 1);
+            Test test = testSuite.Tests.First(e => e.Name.Equals(testName, StringComparison.OrdinalIgnoreCase));
+
+            ParamsNulls testParams = (ParamsNulls)test.Params;
+
+            int defaultPackagesCount = (int)testParams.DefaultPackagesCount;
+            PlatformPackages platformPackages = testParams.PlatformPackagesCount;
+
+            if (platformPackages == null)
+            {
+                return defaultPackagesCount;
+            }
+
+            string lowerPlatformName = platformName.ToLower();
+
+            if (platformPackages.Android != null && (lowerPlatformName.Contains("api") || lowerPlatformName.Contains("android")))
+            {
+                return (int)platformPackages.Android;
+            }
+
+            if (platformPackages.Ios != null && lowerPlatformName.Contains("ios"))
+            {
+                return (int)platformPackages.Ios;
+            }
+
+            if (platformPackages.MacOS != null && lowerPlatformName.Contains("macos"))
+            {
+                return (int)platformPackages.MacOS;
+            }
+
+            if (platformPackages.Uwp != null && lowerPlatformName.Contains("uwp"))
+            {
+                return (int)platformPackages.Uwp;
+            }
+
+            return defaultPackagesCount;
         }
 
         private bool CheckEventsTimestampOrder(List<ProxyPackageInfoV2> testPackages, string platformName)
@@ -650,9 +793,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                 if (lastEventByTimestamp is T2)
                 {
-                    List<IHasTimestamp> timestampEventsWithoutLast = new(timestampEvents);
-                    timestampEventsWithoutLast.Remove(lastEventByTimestamp);
-
+                    IEnumerable<IHasTimestamp> timestampEventsWithoutLast = timestampEvents.Where(e => e.Equals(lastEventByTimestamp));
                     IHasTimestamp secondLastEventByTimestamp = timestampEventsWithoutLast.Last();
 
                     if (secondLastEventByTimestamp is T1 &&

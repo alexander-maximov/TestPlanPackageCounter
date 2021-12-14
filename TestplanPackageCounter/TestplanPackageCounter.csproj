@@ -75,6 +75,7 @@
     <Compile Include="Packages\Content\General\IHasTimestamp.cs" />
     <Compile Include="Packages\Content\V2\Analytics\AnalyticsRequest.cs" />
     <Compile Include="Packages\Content\V2\Analytics\Events\AbstractSdkEventV2.cs" />
+    <Compile Include="Packages\Content\V2\Analytics\Events\Adrv.cs" />
     <Compile Include="Packages\Content\V2\Analytics\Events\AlV2.cs" />
     <Compile Include="Packages\Content\V2\Analytics\Events\CaV2.cs" />
     <Compile Include="Packages\Content\V2\Analytics\Events\CeV2.cs" />

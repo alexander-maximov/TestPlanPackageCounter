@@ -10,7 +10,7 @@
     using TestplanPackageCounter.Testplan.Content;
     using TestplanPackageCounter.Testplan.Converters;
     using TestplanPackageCounter.UglyCode;
-    using TestplanPackageCounter.UglyCode.PackagesEnumerator;    
+    using TestplanPackageCounter.UglyCode.PackagesEnumerator;
 
     class Program
     {
@@ -18,7 +18,7 @@
         {
             Stopwatch watch = Stopwatch.StartNew();
 
-            string pathToResults = @"C:\Users\at\Documents\devtodev\TestResults\205 run\Full";
+            string pathToResults = @"C:\Users\at\Documents\devtodev\TestResults\14.12 Native run";
             //TODO: pick default values from testplan option, otherwise 999
             //TODO: null packages removal for v2
             CounterSettings.PathToTestplan = Path.Combine(pathToResults, "testplan.json");
