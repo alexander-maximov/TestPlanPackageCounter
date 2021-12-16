@@ -42,16 +42,35 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             foreach (KeyValuePair<string, Dictionary<string, TestPackagesData>> packageData in this._packagesDictionary)
             {
                 string testName = packageData.Key;
-                bool breakCircle = false;
                 bool commonExist = false;
 
                 if (this.CompareEventCodes(packageData.Value))
                 {
                     equalsCount++;
                     Console.Write($"\rEquals tests count: {equalsCount}");
-                    breakCircle = true;
+
+                    csvContent.Append(testName);
+                    csvContent.Append(";All");
+
+                    this._GeneratePackagesData(csvContent, packageData.Value.First(e => e.Value.OriginalPackagesCount != 999).Value);
+
+                    csvContent.AppendLine();
+                    csvContent.AppendLine();
+
+                    continue;
                 }
 
+                this.PickPlatformResult(testName, Platforms.Android, packageData.Value, csvContent);
+                this.PickPlatformResult(testName, Platforms.IOSandMacOS, packageData.Value, csvContent);
+                this.PickPlatformResult(testName, Platforms.Uwp, packageData.Value, csvContent);
+                this.PickPlatformResult(testName, Platforms.Windows, packageData.Value, csvContent);
+                this.PickPlatformResult(testName, Platforms.Web, packageData.Value, csvContent);
+
+                if (!packageData.Value.All(e => e.Value.PackagesCountWithoutIgnored == 999))
+                {
+                    csvContent.AppendLine();
+                }
+                /*
                 IEnumerable<IEnumerable<string>> eventCodesCollection = from packageInfo in packageData.Value
                                                                         select this.TrimTimestamp(packageInfo.Value.EventCodes);
 
@@ -59,19 +78,19 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                 foreach (KeyValuePair<string, TestPackagesData> platformPackageData in packageData.Value)
                 {
-                    string platformName = breakCircle ? "All" : platformPackageData.Key.Replace("TestResults_", "");
+                    string platformName = platformPackageData.Key.Replace("TestResults_", "");
 
                     TestPackagesData testPackagesData = platformPackageData.Value;
                     eventsCountTotal += (ulong)testPackagesData.EventCodes.Count();
 
-                    if (!breakCircle && Enumerable.SequenceEqual(eventCodesWithoutTimestamp, this.TrimTimestamp(testPackagesData.EventCodes)))
+                    if (commonCount > 1 && Enumerable.SequenceEqual(eventCodesWithoutTimestamp, this.TrimTimestamp(testPackagesData.EventCodes)))
                     {
                         if (commonExist)
                         {
                             continue;
                         }
 
-                        platformName = $"Common x{commonCount} ({platformName} like)";
+                        platformName = $"Common #1 x{commonCount} ({platformName} like)";
                         commonExist = true;
                     }
 
@@ -86,23 +105,90 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                     this._GeneratePackagesData(csvContent, testPackagesData);
 
                     csvContent.AppendLine();
-
-                    if (breakCircle)
-                    {
-                        breakCircle = false;
-                        break;
-                    }
                 }
 
                 if (!packageData.Value.All(e => e.Value.PackagesCountWithoutIgnored == 999))
                 {
                     csvContent.AppendLine();
                 }
+                */
             }
 
             Console.WriteLine($"\nTotal events count in report: {eventsCountTotal}");
 
             File.WriteAllText(filePath, csvContent.ToString());
+        }
+
+        private readonly Dictionary<Platforms, IEnumerable<string>> _patternsDictionary = new()
+        {
+            { Platforms.Android, new List<string>() { "api", "android" } },
+            { Platforms.IOSandMacOS, new List<string>() { "ios", "macos" } },
+            { Platforms.Uwp, new List<string>() { "uwp" } },
+            { Platforms.Windows, new List<string>() { "win" } },
+            { Platforms.Web, new List<string>() { "web" } }
+        };
+
+        private void PickPlatformResult(string testName, Platforms platform, Dictionary<string, TestPackagesData> allPlatformsPackagesData, StringBuilder csvContent)
+        {
+            if (testName.Equals("TRORDEREDWITHRESTARTSUITE_TRSTARTINITRESTARTTRSKIPINITTESTPART2", StringComparison.OrdinalIgnoreCase))
+            {
+                int debug = 1;
+            }
+
+            string platformNameToTypeInCommon = platform == Platforms.IOSandMacOS ? "iOS and MacOS" : platform.ToString();
+
+            IEnumerable<KeyValuePair<string, TestPackagesData>> platformPackagesData = from packageInfo in allPlatformsPackagesData
+                                       where this._patternsDictionary[platform].Any(e => packageInfo.Key.ToLower().Contains(e))
+                                       select packageInfo;
+
+            IEnumerable<IEnumerable<string>> platformEventCodesCollection = from packageInfo in allPlatformsPackagesData
+                                                                            where this._patternsDictionary[platform].Any(e => packageInfo.Key.ToLower().Contains(e))
+                                                                            select this.TrimTimestamp(packageInfo.Value.EventCodes);
+
+            IEnumerable<string> commonEventCodesGroup = this.Mode(platformEventCodesCollection, out int commonCount);
+            bool commonExist = false;
+
+            if (commonCount > 1)
+            {
+                TestPackagesData commonPackagesData = platformPackagesData.First(e => Enumerable.SequenceEqual(commonEventCodesGroup, this.TrimTimestamp(e.Value.EventCodes))).Value;
+
+                if (commonPackagesData.PackagesCountWithoutIgnored != 999)
+                {
+                    string platformName = $"Common {platformNameToTypeInCommon} x{commonCount}";
+
+                    csvContent.Append(testName);
+                    csvContent.Append($";{platformName}");
+
+                    this._GeneratePackagesData(csvContent, commonPackagesData);
+
+                    csvContent.AppendLine();
+                    commonExist = true;
+                }
+            }
+
+            foreach (KeyValuePair<string, TestPackagesData> platformPackageData in platformPackagesData)
+            {
+                string platformName = platformPackageData.Key.Replace("TestResults_", "");
+
+                TestPackagesData testPackagesData = platformPackageData.Value;
+
+                if (commonExist && Enumerable.SequenceEqual(commonEventCodesGroup, this.TrimTimestamp(testPackagesData.EventCodes)))
+                {
+                    continue;
+                }
+
+                if (testPackagesData.PackagesCountWithoutIgnored == 999)
+                {
+                    continue;
+                }
+
+                csvContent.Append(testName);
+                csvContent.Append($";{platformName}");
+
+                this._GeneratePackagesData(csvContent, testPackagesData);
+
+                csvContent.AppendLine();
+            }
         }
 
         private IEnumerable<string> Mode(IEnumerable<IEnumerable<string>> list, out int max)

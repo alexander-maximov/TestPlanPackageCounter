@@ -4,7 +4,6 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Web;
-using TestplanPackageCounter.Counter;
 using TestplanPackageCounter.Packages.Content.General;
 using TestplanPackageCounter.Testplan.Content;
 

@@ -12,6 +12,7 @@ using TestplanPackageCounter.Packages.Content.General;
 using TestplanPackageCounter.Packages.Content.V2;
 using TestplanPackageCounter.Packages.Content.V2.Analytics;
 using TestplanPackageCounter.Packages.Content.V2.Analytics.Events;
+using TestplanPackageCounter.Packages.Content.V2.Anticheat;
 using TestplanPackageCounter.Packages.Content.V2.SdkVersion;
 using TestplanPackageCounter.Packages.Content.V2.UserIdentification;
 using TestplanPackageCounter.Packages.Converters.V2;
@@ -234,7 +235,7 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
         {
             Console.WriteLine("Packages enumeration started..");
 
-            foreach (var deserializedPlatformPackages in this._deserializedPackages)
+            foreach (KeyValuePair<string, Dictionary<string, List<ProxyPackageInfoV2>>> deserializedPlatformPackages in this._deserializedPackages)
             {
                 string platformName = deserializedPlatformPackages.Key;
 
@@ -300,6 +301,31 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             string platformName
         )
         {
+            if (platformName.ToLower().Contains("web"))
+            {
+                if (testPackages.Any(e => e.RequestHeaders.ContainsKey("Sec-Fetch-Mode")))
+                {
+                    List<ProxyPackageInfoV2> temporatyPackages = new();
+
+                    foreach (ProxyPackageInfoV2 package in testPackages)
+                    {
+                        if (package.RequestHeaders.ContainsKey("Sec-Fetch-Mode"))
+                        {
+                            string[] secFetchModeValue = package.RequestHeaders["Sec-Fetch-Mode"];
+
+                            if (secFetchModeValue.Length == 1 && secFetchModeValue.First() == "cors")
+                            {
+                                continue;
+                            }
+                        }
+
+                        temporatyPackages.Add(package);
+                    }
+
+                    testPackages = new(temporatyPackages);
+                }
+            }
+
             this._previousTestPackages = new List<ProxyPackageInfoV2>(testPackages);
 
             IEnumerable<string> doublesSignatures = this.PackagesDoubleCheck(testPackages, testPackages);
@@ -395,8 +421,9 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
             }
             */
 
-            foreach (ProxyPackageInfoV2 testPackage in testPackages.Where(e => e.RequestJson is AnalyticsRequest or null).OrderBy(e => e.Timestamp))
+            foreach (ProxyPackageInfoV2 testPackage in testPackages.Where(e => e.RequestJson is AnalyticsRequest or AnticheatRequest or null).OrderBy(e => e.Timestamp))
             {
+                bool indexIncrease = true;
                 int responseCode = (int)testPackage.ResponseCode;
                 string requestUrl = testPackage.RequestUrl;
                 string prefixTestName = testPackage.TestName != testName ? testPackage.TestName : "";
@@ -410,13 +437,18 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                 if (requestUrl == null)
                 {
                     eventCodes.Add($"[(#{index})NullPackage(Code:{responseCode})]");
-                    index++;
                     continue;
                 }
 
                 if (testPackage.RequestJson == null && !requestUrl.Contains("config") && !requestUrl.Contains("identification"))
                 {
                     eventCodes.Add($"[(#{index})NullRequest(Code:{responseCode})]");
+                    continue;
+                }
+
+                if (testPackage.RequestJson is AnticheatRequest)
+                {
+                    eventCodes.Add($"[{prefixTestName}(#{index})Anticheat request]");
                     index++;
                     continue;
                 }
@@ -434,36 +466,36 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
 
                             if (ueEvent == timestampEvents.Last())
                             {
+                                indexIncrease = false;
                                 continue;
                             }
                         }
                         
                         if (testName.ToUpper().Contains("WORKWITHUSERSSUITE") && responseCode == 404)
                         {
+                            indexIncrease = false;
                             continue;
                         }
                         
                         if (responseCode == 0 || responseCode == 200)
                         {
                             eventCodes.Add($"[{prefixTestName}(#{index}){abstractSdkEvent.Code}]({timestamp})");
-                            index++;
                             continue;
                         }
 
                         eventCodes.Add($"[{prefixTestName}(#{index}){abstractSdkEvent.Code}:(Code:{responseCode})]({timestamp})");
-                        index++;
                         continue;
                     }
                     
                     if (testName.ToUpper().Contains("WORKWITHUSERSSUITE") && responseCode == 404)
                     {
+                        indexIncrease = false;
                         continue;
                     }
                     
                     if (responseCode == 0 || responseCode == 200)
                     {
                         eventCodes.Add($"[{prefixTestName}(#{index}){abstractSdkEvent.Code}]");
-                        index++;
                         continue;
                     }
 
@@ -471,6 +503,13 @@ namespace TestplanPackageCounter.UglyCode.PackagesEnumerator
                     index++;
                 }
 
+                if (!indexIncrease)
+                {
+                    indexIncrease = true;
+                    continue;
+                }
+
+                index++;
             }
 
             foreach (ProxyPackageInfoV2 proxyPackage in testPackages.Where(e => e.RequestJson is SdkVersionRequest))

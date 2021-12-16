@@ -63,8 +63,7 @@ namespace TestplanPackageCounter.UglyCode
             return maxCaCount;
         }
 
-        private readonly Dictionary<Platforms, List<string>> _patternsDictionary =
-            new Dictionary<Platforms, List<string>>()
+        private readonly Dictionary<Platforms, List<string>> _patternsDictionary = new()
         {
             { Platforms.Android, new List<string>() { "api", "android" } },
             { Platforms.IOS, new List<string>() { "ios" } },

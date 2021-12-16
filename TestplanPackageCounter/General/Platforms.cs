@@ -8,6 +8,8 @@
         MacOS,
         Uwp,
         Unreal,
-        Windows
+        Windows,
+        IOSandMacOS,
+        Web
     }
 }
